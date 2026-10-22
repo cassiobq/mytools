@@ -100,8 +100,17 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   // Lugar no Google Maps (telefone, endereço, cid). Também em paralelo; falha não afeta o resto.
   const localPromise = Promise.resolve()
     .then(() => buscarLocal(`${item.nome} ${item.cidade}`))
-    .then((locais) => escolherLocal(locais, item.nome, item.cidade))
-    .catch(() => null);
+    .then((locais) => {
+      const escolhido = escolherLocal(locais, item.nome, item.cidade);
+      ficha.etapas.google_maps = escolhido
+        ? st('ok', escolhido.titulo)
+        : st('nao_encontrado', `${locais.length} lugar(es), nenhum com nome e cidade conferindo${locais.length ? `: ${locais.slice(0, 3).map((l) => `${l.titulo} (${l.endereco})`).join('; ')}` : ''}`);
+      return escolhido;
+    })
+    .catch((e) => {
+      ficha.etapas.google_maps = st('erro', msgErro(e));
+      return null;
+    });
 
   // 1b) Instagram fora da primeira página: uma busca extra só no Instagram (site:instagram.com).
   if (ficha.instagram.status === 'nao_encontrado') {
