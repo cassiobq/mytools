@@ -16,7 +16,7 @@ export function compactar(s) {
 // Sufixos societários e palavras de ligação: não ajudam a identificar a empresa.
 const STOPWORDS = new Set([
   'ltda', 'me', 'epp', 'eireli', 'sa', 'ss', 'cia', 'mei', 'slu',
-  'de', 'da', 'do', 'das', 'dos', 'e', 'o', 'a', 'os', 'as', 'em', 'na', 'no',
+  'de', 'da', 'do', 'das', 'dos', 'e', 'o', 'a', 'os', 'as', 'em', 'na', 'no', 'para', 'com', 'por',
 ]);
 
 // Palavras de ramo: contam para a semelhança, mas sozinhas não identificam ninguém.
