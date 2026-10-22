@@ -1,0 +1,78 @@
+# ficha-empresa
+
+Digite `NOME_FANTASIA CIDADE` (uma empresa por linha, até 20) e receba a ficha com **nome fantasia** (com `BAIXADA` quando for o caso), **sócio**, **Instagram**, **Google Maps** e **CNPJ**.
+
+Fluxo da função `api/ficha.js`, por empresa:
+
+1. Busca na web com o texto digitado: Instagram e site oficial (para um possível `ftid` do Maps).
+2. Busca na web com o texto + `CNPJ`: candidatos de 14 dígitos validados pelo dígito verificador.
+3. [Minha Receita](https://docs.minhareceita.org/) (`GET https://minhareceita.org/{cnpj}`) para até 5 candidatos. Só é aceito um CNPJ cuja cidade bate com a digitada e cujo nome é parecido. Se mais de um conferir, fica o ativo e a ficha sai marcada como `ambiguo`.
+
+Nenhum dado é inventado. O que não for encontrado com segurança volta como `nao_encontrado`.
+
+## Estrutura
+
+```
+index.html        interface (HTML/CSS/JS puros)
+api/ficha.js      função serverless (Node 20, fetch nativo, sem dependências)
+lib/              parser, CNPJ, busca (buscarWeb), Receita, Instagram, Maps, orquestração
+test/             testes com respostas mockadas (node --test)
+```
+
+Para trocar de provedor de busca (ex.: Google Programmable Search), reescreva apenas `buscarWeb` em `lib/busca.js`, mantendo o formato de saída.
+
+## 1. Chave do Brave Search
+
+1. Crie uma conta em <https://api-dashboard.search.brave.com/>.
+2. Em **Plans**, assine o plano **Search**. Desde fev/2026 não existe mais o plano 100% grátis: cada conta recebe **US$ 5 em créditos por mês** (cerca de 1.000 buscas), mas a Brave pede cartão e exige atribuição ("resultados via Brave Search") no site. Cada empresa consome 2 buscas. Confira os valores atuais na página de planos.
+3. Em **API Keys**, gere a chave.
+
+Nunca coloque a chave no `index.html` nem faça commit dela. Ela só existe como variável de ambiente no servidor.
+
+## 2. Definir `BRAVE_API_KEY` na Vercel
+
+No projeto na Vercel: **Settings > Environment Variables**. Adicione:
+
+| Nome | Valor | Ambientes |
+|---|---|---|
+| `BRAVE_API_KEY` | sua chave | Production, Preview, Development |
+| `BRAVE_INTERVALO_MS` (opcional) | intervalo mínimo entre buscas em ms; padrão `1000` | idem |
+
+Depois de salvar, faça um novo deploy para a variável valer. Se o seu plano permite mais requisições por segundo, baixe `BRAVE_INTERVALO_MS` (por exemplo, para `100`) para acelerar listas grandes.
+
+## 3. Rodar localmente
+
+```bash
+npm i -g vercel        # uma vez
+cd ficha-empresa
+vercel link            # associa a pasta a um projeto (pede confirmação)
+vercel env pull .env.local   # ou crie .env.local a partir de .env.example
+vercel dev             # http://localhost:3000
+```
+
+Testes (não usam rede nem chave):
+
+```bash
+npm test               # = node --test
+```
+
+## API
+
+`POST /api/ficha` com `{"empresas": "linha 1\nlinha 2"}` (ou uma lista), ou `GET /api/ficha?q=baterias+luxfor+rio+verde`.
+
+- Com `Accept: application/x-ndjson`, a resposta vem em streaming, uma linha JSON por evento (`inicio`, `etapa`, `resultado`, `fim`). É assim que a interface mostra o progresso.
+- Sem esse header, a resposta é `{ total, resultados: [...] }`.
+
+Cada ficha traz `etapas.{busca_web,busca_cnpj,receita}`, `empresa`, `socio`, `instagram` e `maps`, cada um com `status` (`ok` | `nao_encontrado` | `erro`) e `mensagem`, além de `ambiguo`, `outros_candidatos`, `candidatos_descartados` e `cidade_inferida`.
+
+Limites: 8 s por chamada externa, 3 empresas em paralelo, 20 empresas por requisição e `maxDuration` de 60 s (`vercel.json`).
+
+## Como o input é interpretado
+
+- Com vírgula, ` - ` ou `|`, a cidade é o último pedaço: `Baterias Luxfor, Rio Verde`.
+- Sem separador, a cidade é o fim do texto. A ferramenta procura o maior final que seja um município de Goiás (lista do IBGE em `lib/cidades-go.js`). Se não achar, usa a última palavra (ou as 3 últimas, em nomes do tipo "X de Y"). Nesse caso a ficha volta com `cidade_inferida: true`.
+- Uma UF no fim (`... Rio Verde/GO`, `... rio verde go`) é reconhecida e usada como filtro.
+
+## Link do Maps
+
+`https://www.google.com/maps/search/?api=1&query=` + nome fantasia, logradouro, número, município e UF da Receita. Se o site oficial da empresa tiver um único identificador de local (`ftid` `0x...:0x...`), o link vira `https://www.google.com/maps?ftid=...`. Links `maps.app.goo.gl` não são gerados, porque só o botão Compartilhar do Google cria esses links.

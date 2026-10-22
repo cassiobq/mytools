@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Ficha de Empresa</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --texto: #1b1f24; --suave: #5b6470; --borda: #d9dde3;
+    --primaria: #1f5fd1; --primaria-texto: #ffffff; --foco: #f0a500;
+    --ok: #1d7a3a; --aviso-bg: #fff4d6; --aviso: #7a5600; --perigo-bg: #fde8e8; --perigo: #a51d1d;
+    --linha-baixada: #fdf1f1; --linha-ambigua: #fffaeb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --card: #1a1e24; --texto: #e7eaee; --suave: #9aa4b1; --borda: #2e343d;
+      --primaria: #5b93f5; --primaria-texto: #0b1220; --foco: #ffc24d;
+      --ok: #5fd384; --aviso-bg: #3a2f10; --aviso: #ffd56b; --perigo-bg: #3d1a1a; --perigo: #ff8f8f;
+      --linha-baixada: #2a1a1c; --linha-ambigua: #2a2516;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  p.sub { margin: 0 0 20px; color: var(--suave); }
+  .card { background: var(--card); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  textarea { width: 100%; min-height: 140px; padding: 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--bg); color: var(--texto); font: inherit; resize: vertical; }
+  .dica { font-size: .875rem; color: var(--suave); margin: 6px 0 12px; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--primaria); background: var(--primaria); color: var(--primaria-texto); cursor: pointer; min-height: 44px; }
+  button.sec { background: transparent; color: var(--primaria); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+  .status-msg { font-size: .9rem; color: var(--suave); }
+  .erro-geral { color: var(--perigo); background: var(--perigo-bg); padding: 10px 12px; border-radius: 8px; margin-top: 12px; }
+
+  ol.progresso { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ol.progresso li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 8px; }
+  .prog-nome { font-weight: 600; flex: 1 1 200px; overflow-wrap: anywhere; }
+  .etapas { display: flex; gap: 6px; flex-wrap: wrap; }
+  .etapa { font-size: .8rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda); color: var(--suave); }
+  .etapa[data-estado="ativa"] { border-color: var(--primaria); color: var(--primaria); }
+  .etapa[data-estado="ativa"]::before { content: "● "; animation: pisca 1s infinite; }
+  .etapa[data-estado="feita"] { border-color: var(--ok); color: var(--ok); }
+  .etapa[data-estado="feita"]::before { content: "✓ "; }
+  .etapa[data-estado="vazio"] { border-style: dashed; }
+  .etapa[data-estado="vazio"]::before { content: "– "; }
+  .etapa.falha { border-color: var(--perigo); color: var(--perigo); }
+  .etapa.falha::before { content: "✕ "; }
+  @keyframes pisca { 50% { opacity: .2; } }
+  @media (prefers-reduced-motion: reduce) { .etapa[data-estado="ativa"]::before { animation: none; } }
+
+  .tabela-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
+  tr.baixada td { background: var(--linha-baixada); }
+  tr.ambigua td { background: var(--linha-ambigua); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+  .nome { font-weight: 600; overflow-wrap: anywhere; }
+  .entrada { display: block; font-size: .8rem; color: var(--suave); font-weight: 400; }
+  .selo { display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
+  .selo.baixada { background: var(--perigo-bg); color: var(--perigo); border: 1px solid var(--perigo); }
+  .selo.ambiguo { background: var(--aviso-bg); color: var(--aviso); border: 1px solid var(--aviso); }
+  .selo.info { color: var(--suave); border: 1px solid var(--borda); }
+  .vazio { color: var(--suave); font-style: italic; }
+  .falha { color: var(--perigo); }
+  a { color: var(--primaria); overflow-wrap: break-word; }
+  td .cel { min-width: 0; }
+  details { margin-top: 6px; font-size: .85rem; }
+  summary { cursor: pointer; color: var(--suave); }
+  details ul { margin: 6px 0 0; padding-left: 18px; }
+  .nota { font-size: .8rem; color: var(--suave); }
+
+  @media (max-width: 720px) {
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tr { border: 1px solid var(--borda); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+    td { border-bottom: 1px solid var(--borda); display: grid; grid-template-columns: 96px 1fr; gap: 8px; }
+    td:last-child { border-bottom: 0; }
+    td::before { content: attr(data-rotulo); font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--suave); }
+    .mono { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ficha de Empresa</h1>
+  <p class="sub">Nome fantasia, sócio, Instagram e Google Maps a partir de <strong>NOME CIDADE</strong>.</p>
+
+  <section class="card" aria-labelledby="titulo-busca">
+    <h2 id="titulo-busca">Empresas</h2>
+    <form id="form">
+      <label for="empresas">Uma empresa por linha (máximo 20)</label>
+      <textarea id="empresas" name="empresas" spellcheck="false" autocomplete="off"
+        placeholder="baterias luxfor rio verde&#10;Padaria Sol Nascente, Jataí" aria-describedby="dica"></textarea>
+      <p class="dica" id="dica">Formato: <code>NOME CIDADE</code>. Para deixar claro onde começa a cidade, use vírgula, " - " ou "|". Atalho: Ctrl+Enter busca.</p>
+      <div class="acoes">
+        <button type="submit" id="buscar">Buscar</button>
+        <span class="status-msg" id="status" role="status" aria-live="polite"></span>
+      </div>
+      <div id="erro" class="erro-geral" role="alert" hidden></div>
+    </form>
+  </section>
+
+  <section class="card" id="sec-progresso" aria-labelledby="titulo-progresso" hidden>
+    <h2 id="titulo-progresso">Progresso</h2>
+    <ol class="progresso" id="progresso"></ol>
+  </section>
+
+  <section class="card" id="sec-resultado" aria-labelledby="titulo-resultado" hidden>
+    <div class="acoes" style="justify-content: space-between; margin-bottom: 8px;">
+      <h2 id="titulo-resultado" style="margin: 0;">Resultado</h2>
+      <button type="button" class="sec" id="copiar">Copiar para planilha</button>
+    </div>
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Nome fantasia</th><th scope="col">Sócio</th><th scope="col">Instagram</th><th scope="col">Maps</th><th scope="col">CNPJ</th></tr>
+        </thead>
+        <tbody id="resultado"></tbody>
+      </table>
+    </div>
+    <p class="nota">Destaques: <span class="selo baixada">BAIXADA</span> empresa baixada na Receita · <span class="selo ambiguo">AMBÍGUO</span> mais de um CNPJ confere; foi escolhido o ativo.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const MAX = 20;
+  const ETAPAS = [
+    ['busca_web', 'Buscando na web'],
+    ['busca_cnpj', 'Buscando CNPJ'],
+    ['receita', 'Consultando Receita'],
+  ];
+  const $ = (id) => document.getElementById(id);
+  const form = $('form'), campo = $('empresas'), botao = $('buscar'), status = $('status'), erroBox = $('erro');
+  const lista = $('progresso'), corpo = $('resultado');
+  let fichas = [];
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const urlSegura = (u) => (/^https:\/\//i.test(u ?? '') ? u : null);
+
+  function mostrarErro(msg) { erroBox.textContent = msg; erroBox.hidden = !msg; }
+
+  campo.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); form.requestSubmit(); }
+  });
+
+  function montarProgresso(itens) {
+    lista.innerHTML = itens.map((it, i) => `
+      <li id="prog-${i}">
+        <span class="prog-nome">${esc(it.entrada)}</span>
+        <span class="etapas">${ETAPAS.map(([k, rot]) => `<span class="etapa" data-etapa="${k}" data-estado="pendente">${rot}</span>`).join('')}</span>
+      </li>`).join('');
+    $('sec-progresso').hidden = false;
+  }
+
+  function marcarEtapa(i, etapa) {
+    const li = $(`prog-${i}`);
+    if (!li) return;
+    let passou = true;
+    for (const el of li.querySelectorAll('.etapa')) {
+      if (el.dataset.etapa === etapa) { el.dataset.estado = 'ativa'; passou = false; }
+      else el.dataset.estado = passou ? 'feita' : 'pendente';
+    }
+  }
+
+  function concluirProgresso(i, ficha) {
+    const li = $(`prog-${i}`);
+    if (!li) return;
+    li.querySelectorAll('.etapa').forEach((el) => {
+      const st = ficha.etapas?.[el.dataset.etapa]?.status;
+      el.dataset.estado = st === 'ok' ? 'feita' : st === 'pendente' ? 'pendente' : 'vazio';
+      if (st && st !== 'ok') el.title = ficha.etapas[el.dataset.etapa].mensagem || st;
+      if (st === 'erro') el.classList.add('falha');
+    });
+  }
+
+  function celulaLink(campo, rotulo) {
+    const url = urlSegura(campo?.url);
+    if (campo?.status === 'ok' && url) return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(rotulo || url)}</a>`;
+    const cls = campo?.status === 'erro' ? 'falha' : 'vazio';
+    return `<span class="${cls}">${esc(campo?.mensagem || 'não encontrado')}</span>`;
+  }
+
+  function listaCandidatos(titulo, itens) {
+    if (!itens?.length) return '';
+    return `<details><summary>${esc(titulo)} (${itens.length})</summary><ul>${itens.map((c) =>
+      `<li><span class="mono">${esc(c.cnpj_formatado)}</span>${c.nome ? ' — ' + esc(c.nome) : ''}${c.municipio ? ' (' + esc(c.municipio) + ')' : ''}${c.situacao ? ' · ' + esc(c.situacao) : ''}: ${esc(c.motivo)}</li>`).join('')}</ul></details>`;
+  }
+
+  function linhaResultado(f) {
+    const e = f.empresa || {};
+    const ok = e.status === 'ok';
+    const classes = [e.baixada ? 'baixada' : '', f.ambiguo ? 'ambigua' : ''].join(' ').trim();
+    const nome = ok
+      ? `${esc(e.baixada ? e.nome_exibido.replace(/ BAIXADA$/, '') : e.nome_exibido)}${e.baixada ? ' <span class="selo baixada">BAIXADA</span>' : ''}`
+      : `<span class="${e.status === 'erro' ? 'falha' : 'vazio'}">${esc(e.mensagem || 'não encontrado')}</span>`;
+    const selos = [
+      f.ambiguo ? '<span class="selo ambiguo">AMBÍGUO</span>' : '',
+      f.cidade_inferida ? `<span class="selo info" title="Cidade deduzida do fim do texto">cidade: ${esc(f.cidade)}</span>` : '',
+    ].join('');
+    const socio = f.socio?.status === 'ok'
+      ? `${esc(f.socio.nome)}${f.socio.origem === 'razão social' ? ' <span class="selo info">razão social</span>' : ''}`
+      : `<span class="vazio">${esc(f.socio?.mensagem || 'não encontrado')}</span>`;
+    return `<tr class="${classes}">
+      <td data-rotulo="Nome"><div class="cel"><span class="nome">${nome}</span>${selos ? '<br>' + selos : ''}<span class="entrada">${esc(f.entrada)}</span>
+        ${listaCandidatos('Outros CNPJs que conferem', f.outros_candidatos)}${listaCandidatos('Candidatos descartados', f.candidatos_descartados)}</div></td>
+      <td data-rotulo="Sócio"><div class="cel">${socio}</div></td>
+      <td data-rotulo="Instagram"><div class="cel">${celulaLink(f.instagram, f.instagram?.usuario)}</div></td>
+      <td data-rotulo="Maps"><div class="cel">${celulaLink(f.maps, 'Abrir no Maps')}</div></td>
+      <td data-rotulo="CNPJ" class="mono"><div class="cel">${ok ? esc(e.cnpj_formatado) : '<span class="vazio">—</span>'}</div></td>
+    </tr>`;
+  }
+
+  function renderizar() {
+    corpo.innerHTML = fichas.filter(Boolean).map(linhaResultado).join('');
+    $('sec-resultado').hidden = !fichas.some(Boolean);
+  }
+
+  async function lerStream(resp, aoEvento) {
+    const leitor = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await leitor.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let n;
+      while ((n = buf.indexOf('\n')) >= 0) {
+        const linha = buf.slice(0, n).trim();
+        buf = buf.slice(n + 1);
+        if (linha) aoEvento(JSON.parse(linha));
+      }
+    }
+    if (buf.trim()) aoEvento(JSON.parse(buf));
+  }
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    mostrarErro('');
+    const linhas = campo.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!linhas.length) { mostrarErro('Digite pelo menos uma empresa.'); campo.focus(); return; }
+    if (linhas.length > MAX) { mostrarErro(`Máximo de ${MAX} empresas por busca (você digitou ${linhas.length}).`); return; }
+
+    botao.disabled = true;
+    fichas = new Array(linhas.length);
+    renderizar();
+    montarProgresso(linhas.map((entrada) => ({ entrada })));
+    let feitas = 0;
+    status.textContent = `Buscando ${linhas.length} empresa(s)…`;
+
+    const aoEvento = (e) => {
+      if (e.tipo === 'etapa') marcarEtapa(e.indice, e.etapa);
+      if (e.tipo === 'resultado') {
+        fichas[e.indice] = e.ficha;
+        concluirProgresso(e.indice, e.ficha);
+        feitas++;
+        status.textContent = `${feitas} de ${linhas.length} concluída(s)`;
+        renderizar();
+      }
+    };
+
+    try {
+      const resp = await fetch('/api/ficha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson, application/json' },
+        body: JSON.stringify({ empresas: linhas }),
+      });
+      const tipo = resp.headers.get('content-type') || '';
+      if (!resp.ok) {
+        const j = tipo.includes('json') ? await resp.json().catch(() => ({})) : {};
+        throw new Error(j.erro || `Erro ${resp.status} no servidor.`);
+      }
+      if (tipo.includes('ndjson') && resp.body) await lerStream(resp, aoEvento);
+      else (await resp.json()).resultados.forEach((ficha, indice) => aoEvento({ tipo: 'resultado', indice, ficha }));
+      status.textContent = `Pronto: ${feitas} empresa(s).`;
+    } catch (e) {
+      mostrarErro(e.message || 'Falha na busca.');
+      status.textContent = '';
+    } finally {
+      botao.disabled = false;
+    }
+  });
+
+  const celulaTsv = (s) => String(s ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+
+  $('copiar').addEventListener('click', async () => {
+    const linhas = [['Nome fantasia', 'Sócio', 'Instagram', 'Maps']];
+    for (const f of fichas.filter(Boolean)) {
+      linhas.push([
+        f.empresa?.status === 'ok' ? f.empresa.nome_exibido : `${f.entrada} (não encontrado)`,
+        f.socio?.status === 'ok' ? f.socio.nome : 'não encontrado',
+        f.instagram?.status === 'ok' ? f.instagram.url : 'não encontrado',
+        f.maps?.status === 'ok' ? f.maps.url : 'não encontrado',
+      ].map(celulaTsv));
+    }
+    const tsv = linhas.map((l) => l.join('\t')).join('\n');
+    try {
+      await navigator.clipboard.writeText(tsv);
+    } catch {
+      const t = document.createElement('textarea');
+      t.value = tsv; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+    }
+    status.textContent = `Copiado: ${linhas.length - 1} linha(s). Cole na planilha.`;
+  });
+})();
+</script>
+</body>
+</html>
