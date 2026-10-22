@@ -216,7 +216,7 @@
       ? `${esc(f.socio.nome)}${f.socio.origem === 'razão social' ? ' <span class="selo info">razão social</span>' : ''}`
       : `<span class="vazio">${esc(f.socio?.mensagem || 'não encontrado')}</span>`;
     return `<tr class="${classes}">
-      <td data-rotulo="Nome"><div class="cel"><span class="nome">${nome}</span>${selos ? '<br>' + selos : ''}<span class="entrada">${esc(f.entrada)}</span>
+      <td data-rotulo="Nome"><div class="cel"><span class="nome">${nome}</span>${selos ? '<br>' + selos : ''}${ok && e.segmento ? `<span class="entrada" title="${esc(e.atividade)}">Segmento: ${esc(e.segmento)}</span>` : ''}<span class="entrada">${esc(f.entrada)}</span>
         ${listaCandidatos('Outros CNPJs que conferem', f.outros_candidatos)}${listaCandidatos('Candidatos descartados', f.candidatos_descartados)}${listaPerfis(f.instagram?.descartados)}</div></td>
       <td data-rotulo="Sócio"><div class="cel">${socio}</div></td>
       <td data-rotulo="Instagram"><div class="cel">${celulaLink(f.instagram, f.instagram?.usuario)}</div></td>
@@ -298,12 +298,12 @@
   const celulaTsv = (s) => String(s ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 
   $('copiar').addEventListener('click', async () => {
-    // Sem cabeçalho, na ordem da planilha: Empresa, Segmento (vazio), Responsável, Site (Instagram), Local (Maps).
+    // Sem cabeçalho, na ordem da planilha: Empresa, Segmento, Responsável, Site (Instagram), Local (Maps).
     const linhas = [];
     for (const f of fichas.filter(Boolean)) {
       linhas.push([
         f.empresa?.status === 'ok' ? f.empresa.nome_exibido : `${f.entrada} (não encontrado)`,
-        '',
+        f.empresa?.status === 'ok' ? f.empresa.segmento : '',
         f.socio?.status === 'ok' ? f.socio.nome : 'não encontrado',
         f.instagram?.status === 'ok' ? f.instagram.url : 'não encontrado',
         f.maps?.status === 'ok' ? f.maps.url : 'não encontrado',

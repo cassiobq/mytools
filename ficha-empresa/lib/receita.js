@@ -2,6 +2,7 @@
 import { fetchComTimeout } from './http.js';
 import { somenteDigitos, formatarCnpj } from './cnpj.js';
 import { normalizar } from './texto.js';
+import { segmentoPorCnae } from './segmentos.js';
 
 export async function consultarReceita(cnpj) {
   const d = somenteDigitos(cnpj);
@@ -38,6 +39,7 @@ export function extrairSocio(dados) {
 export function resumirEmpresa(dados) {
   const tipo = String(dados?.descricao_tipo_de_logradouro ?? '').trim();
   const logradouro = String(dados?.logradouro ?? '').trim();
+  const segmento = segmentoPorCnae(dados?.cnae_fiscal, dados?.cnae_fiscal_descricao);
   return {
     cnpj: somenteDigitos(dados?.cnpj),
     cnpj_formatado: formatarCnpj(dados?.cnpj),
@@ -47,6 +49,10 @@ export function resumirEmpresa(dados) {
     baixada: estaBaixada(dados),
     situacao_cadastral: Number(dados?.situacao_cadastral) || null,
     situacao: String(dados?.descricao_situacao_cadastral ?? '').trim(),
+    cnae: String(dados?.cnae_fiscal ?? ''),
+    atividade: String(dados?.cnae_fiscal_descricao ?? '').trim(),
+    segmento: segmento.segmento,
+    segmento_origem: segmento.origem, // 'tabela' (lib/segmentos.js) ou 'cnae' (descrição oficial)
     // Evita "AVENIDA AVENIDA X" quando o tipo já vem no logradouro.
     logradouro: tipo && !normalizar(logradouro).startsWith(normalizar(tipo)) ? `${tipo} ${logradouro}` : logradouro,
     numero: String(dados?.numero ?? '').trim(),

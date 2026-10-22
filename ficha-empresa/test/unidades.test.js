@@ -152,3 +152,17 @@ test('Instagram: caso real "farmacia du povo popular bom jesus de goias"', () =>
   assert.equal(r.url, 'https://www.instagram.com/farmaciadupovobomjesus/');
   assert.deepEqual(r.descartados.map((d) => d.usuario), ['@asfarpopularbomjesus']);
 });
+
+test('segmento pelo CNAE principal: tabela, mais específico vence, e descrição oficial sem correspondência', async () => {
+  const { segmentoPorCnae } = await import('../lib/segmentos.js');
+  assert.deepEqual(segmentoPorCnae(4771701, 'Comércio varejista de produtos farmacêuticos'), { segmento: 'Farmácias', origem: 'tabela' });
+  assert.equal(segmentoPorCnae(4711302).segmento, 'Supermercado');
+  assert.equal(segmentoPorCnae(4530703).segmento, 'Autopeças');
+  assert.equal(segmentoPorCnae(5611203).segmento, 'Lanchonete');
+  assert.equal(segmentoPorCnae(5611201).segmento, 'Restaurante');
+  assert.equal(segmentoPorCnae(4623108).segmento, 'Agropecuária'); // 4623 vence o genérico 46
+  assert.equal(segmentoPorCnae(4641901).segmento, 'Atacado e Distribuidora');
+  assert.equal(segmentoPorCnae(111301).segmento, 'Agronegócio'); // 0111-3/01 sem o zero à esquerda
+  assert.deepEqual(segmentoPorCnae(9001901, 'Produção teatral'), { segmento: 'Produção teatral', origem: 'cnae' });
+  assert.deepEqual(segmentoPorCnae(null, ''), { segmento: '', origem: null });
+});

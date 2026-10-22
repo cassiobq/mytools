@@ -59,6 +59,7 @@ test('aceitação (mock): baterias luxfor rio verde', async () => {
   assert.equal(f.empresa.status, 'ok');
   assert.equal(f.empresa.cnpj_formatado, '03.373.661/0001-50');
   assert.equal(f.empresa.razao_social, 'BATERIAS LUXFOR LTDA');
+  assert.equal(f.empresa.segmento, 'Autopeças');
   assert.equal(f.empresa.municipio, 'RIO VERDE');
   assert.equal(f.empresa.uf, 'GO');
   assert.equal(f.empresa.situacao, 'ATIVA');

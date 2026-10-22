@@ -84,4 +84,6 @@ Limites: 8 s por chamada externa, 3 empresas em paralelo, 20 empresas por requis
 
 ## Copiar para planilha
 
-O botão copia as linhas **sem cabeçalho**, separadas por tabulação, nesta ordem: Empresa, Segmento (vazio), Responsável (sócio), Site (Instagram), Local (Maps). Cole na primeira coluna da planilha.
+O botão copia as linhas **sem cabeçalho**, separadas por tabulação, nesta ordem: Empresa, Segmento, Responsável (sócio), Site (Instagram), Local (Maps). Cole na primeira coluna da planilha.
+
+O **Segmento** vem do CNAE principal registrado na Receita, traduzido pela tabela em `lib/segmentos.js` (ex.: 4771-7/01 vira "Farmácias"). A chave é o começo do código CNAE e vale a mais específica. Para mudar um nome ou incluir um ramo, edite essa tabela. Se o CNAE não estiver na tabela, vai a descrição oficial da atividade.
