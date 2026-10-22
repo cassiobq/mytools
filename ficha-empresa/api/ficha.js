@@ -3,6 +3,7 @@
 // Com "Accept: application/x-ndjson" responde em streaming (uma linha JSON por evento de progresso).
 import { parseEntrada } from '../lib/parser.js';
 import { processarLista } from '../lib/ficha.js';
+import { provedorConfigurado } from '../lib/busca.js';
 
 const MAX_CORPO = 8 * 1024;
 const CACHE_CURTO = 'public, max-age=60, s-maxage=120';
@@ -44,8 +45,8 @@ export default async function handler(req, res) {
   } catch (e) {
     return enviarErro(res, e.status ?? 400, e.message);
   }
-  if (!process.env.BRAVE_API_KEY) {
-    return enviarErro(res, 503, 'BRAVE_API_KEY não configurada no servidor (Vercel > Settings > Environment Variables).');
+  if (!provedorConfigurado()) {
+    return enviarErro(res, 503, 'Nenhuma chave de busca configurada no servidor (SERPER_API_KEY ou BRAVE_API_KEY em Vercel > Settings > Environment Variables).');
   }
 
   const streaming = /application\/x-ndjson/i.test(req.headers.accept ?? '');

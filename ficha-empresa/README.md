@@ -15,30 +15,35 @@ Nenhum dado é inventado. O que não for encontrado com segurança volta como `n
 ```
 index.html        interface (HTML/CSS/JS puros)
 api/ficha.js      função serverless (Node 24, fetch nativo, sem dependências)
-lib/              parser, CNPJ, busca (buscarWeb), Receita, Instagram, Maps, orquestração
+lib/              parser, CNPJ, busca (buscarWeb: Serper ou Brave), Receita, Instagram, Maps, orquestração
 test/             testes com respostas mockadas (node --test)
 ```
 
-Para trocar de provedor de busca (ex.: Google Programmable Search), reescreva apenas `buscarWeb` em `lib/busca.js`, mantendo o formato de saída.
+Para trocar de provedor de busca, mexa apenas em `lib/busca.js`, mantendo o formato de saída de `buscarWeb`.
 
-## 1. Chave do Brave Search
+## 1. Chave de busca
 
-1. Crie uma conta em <https://api-dashboard.search.brave.com/>.
-2. Em **Plans**, assine o plano **Search**. Desde fev/2026 não existe mais o plano 100% grátis: cada conta recebe **US$ 5 em créditos por mês** (cerca de 1.000 buscas), mas a Brave pede cartão e exige atribuição ("resultados via Brave Search") no site. Cada empresa consome 2 buscas. Confira os valores atuais na página de planos.
-3. Em **API Keys**, gere a chave.
+A busca usa o **Serper.dev** (resultados do Google) quando `SERPER_API_KEY` existe; senão, o **Brave Search** (`BRAVE_API_KEY`). Cada empresa consome 2 buscas.
 
-Nunca coloque a chave no `index.html` nem faça commit dela. Ela só existe como variável de ambiente no servidor.
+- **Serper.dev (recomendado):** crie a conta em <https://serper.dev>. São 2.500 buscas grátis, sem cartão, e a chave fica em **API Key**. Depois disso, pacotes pré-pagos. Por padrão pede 10 resultados por busca (`SERPER_NUM`), porque acima disso cada busca custa 2 créditos.
+- **Brave Search:** crie a conta em <https://api-dashboard.search.brave.com/> e assine o plano **Search**. São US$ 5 de crédito por mês (cerca de 1.000 buscas), com cartão obrigatório e atribuição ao Brave no site.
 
-## 2. Definir `BRAVE_API_KEY` na Vercel
+A API oficial do Google (Custom Search JSON API) está fechada para novos clientes e será desligada em 01/01/2027, por isso não é usada.
 
-No projeto na Vercel: **Settings > Environment Variables**. Adicione:
+Nunca coloque a chave no `index.html` nem faça commit dela.
 
-| Nome | Valor | Ambientes |
-|---|---|---|
-| `BRAVE_API_KEY` | sua chave | Production, Preview, Development |
-| `BRAVE_INTERVALO_MS` (opcional) | intervalo mínimo entre buscas em ms; padrão `1000` | idem |
+## 2. Definir a chave na Vercel
 
-Depois de salvar, faça um novo deploy para a variável valer. Se o seu plano permite mais requisições por segundo, baixe `BRAVE_INTERVALO_MS` (por exemplo, para `100`) para acelerar listas grandes.
+No projeto na Vercel: **Settings > Environment Variables**.
+
+| Nome | Valor |
+|---|---|
+| `SERPER_API_KEY` | chave do Serper |
+| `SERPER_NUM` (opcional) | resultados por busca; padrão `10` |
+| `BRAVE_API_KEY` (alternativa) | chave do Brave |
+| `BRAVE_INTERVALO_MS` (opcional) | intervalo mínimo entre buscas no Brave, em ms; padrão `1000` |
+
+Depois de salvar, faça um **Redeploy** para a variável valer.
 
 ## 3. Rodar localmente
 

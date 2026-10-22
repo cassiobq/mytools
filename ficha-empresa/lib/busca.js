@@ -1,9 +1,11 @@
-// Camada de busca na web. Para trocar de provedor (ex.: Google Programmable Search),
-// basta reescrever buscarWeb mantendo o formato de saída:
+// Camada de busca na web. Provedores: Serper.dev (resultados do Google, SERPER_API_KEY)
+// e Brave Search (BRAVE_API_KEY). Usa o Serper se a chave dele existir.
+// Para outro provedor, basta uma função nova com o mesmo formato de saída:
 //   [{ titulo, url, descricao, textos: [trechos extras] }]
 import { fetchComTimeout, esperar } from './http.js';
 
 const BRAVE_URL = 'https://api.search.brave.com/res/v1/web/search';
+const SERPER_URL = 'https://google.serper.dev/search';
 
 // Intervalo mínimo entre chamadas à Brave dentro da mesma instância da função
 // (planos com limite de requisições por segundo). Ajustável por BRAVE_INTERVALO_MS.
@@ -31,10 +33,49 @@ function limparHtml(s) {
     .replace(/&gt;/g, '>');
 }
 
-export async function buscarWeb(query) {
-  const chave = process.env.BRAVE_API_KEY;
-  if (!chave) throw new Error('BRAVE_API_KEY não configurada no servidor');
+export function provedorConfigurado() {
+  if (process.env.SERPER_API_KEY) return 'serper';
+  if (process.env.BRAVE_API_KEY) return 'brave';
+  return null;
+}
 
+export async function buscarWeb(query) {
+  const provedor = provedorConfigurado();
+  if (provedor === 'serper') return buscarSerper(query, process.env.SERPER_API_KEY);
+  if (provedor === 'brave') return buscarBrave(query, process.env.BRAVE_API_KEY);
+  throw new Error('nenhuma chave de busca configurada no servidor (SERPER_API_KEY ou BRAVE_API_KEY)');
+}
+
+// Serper.dev: POST com JSON. num acima de 10 custa 2 créditos, por isso o padrão é 10.
+async function buscarSerper(query, chave) {
+  const num = Number(process.env.SERPER_NUM ?? 10);
+  const resp = await fetchComTimeout(SERPER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-KEY': chave },
+    body: JSON.stringify({ q: query, gl: 'br', hl: 'pt-br', num }),
+  });
+  if (!resp.ok) throw new Error(`busca respondeu HTTP ${resp.status}`);
+  const json = await resp.json();
+  const resultados = (json?.organic ?? []).map((r) => ({
+    titulo: r.title ?? '',
+    url: r.link ?? '',
+    descricao: r.snippet ?? '',
+    textos: (r.sitelinks ?? []).map((s) => `${s.title ?? ''} ${s.link ?? ''}`),
+  }));
+  // Painel do Google (quando existe) costuma trazer o site oficial.
+  const kg = json?.knowledgeGraph;
+  if (kg?.website) {
+    resultados.push({
+      titulo: kg.title ?? '',
+      url: kg.website,
+      descricao: kg.description ?? '',
+      textos: Object.entries(kg.attributes ?? {}).map(([k, v]) => `${k}: ${v}`),
+    });
+  }
+  return resultados;
+}
+
+async function buscarBrave(query, chave) {
   const params = new URLSearchParams({ q: query, count: '20', country: 'BR', search_lang: 'pt-br', safesearch: 'off' });
   for (let tentativa = 1; tentativa <= 2; tentativa++) {
     await aguardarVez();

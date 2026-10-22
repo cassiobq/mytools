@@ -14,6 +14,7 @@ function respostaBrave(resultados) {
 
 beforeEach(() => {
   urls.length = 0;
+  delete process.env.SERPER_API_KEY;
   process.env.BRAVE_API_KEY = 'chave-de-teste';
   process.env.BRAVE_INTERVALO_MS = '0';
   globalThis.fetch = async (url, opcoes) => {
@@ -25,6 +26,16 @@ beforeEach(() => {
       return q.endsWith(' CNPJ')
         ? respostaBrave([{ title: '<strong>BATERIAS LUXFOR</strong> LTDA', url: 'https://cnpj.biz/03373661000150', description: 'CNPJ 03.373.661/0001-50' }])
         : respostaBrave([{ title: 'Baterias Luxfor (@bateriasluxfor.ltda)', url: 'https://www.instagram.com/bateriasluxfor.ltda/', description: '' }]);
+    }
+    if (u.hostname === 'google.serper.dev') {
+      assert.equal(opcoes.method, 'POST');
+      assert.equal(opcoes.headers['X-API-KEY'], 'chave-serper');
+      const { q, gl } = JSON.parse(opcoes.body);
+      assert.equal(gl, 'br');
+      const organic = q.endsWith(' CNPJ')
+        ? [{ title: 'BATERIAS LUXFOR LTDA - CNPJ 03.373.661/0001-50', link: 'https://cnpj.biz/03373661000150', snippet: 'Rio Verde - GO' }]
+        : [{ title: 'Baterias Luxfor (@bateriasluxfor.ltda) • Instagram', link: 'https://www.instagram.com/bateriasluxfor.ltda/', snippet: '' }];
+      return new Response(JSON.stringify({ organic }), { headers: { 'content-type': 'application/json' } });
     }
     if (u.hostname === 'minhareceita.org') {
       return u.pathname === '/03373661000150' ? new Response(LUXFOR, { headers: { 'content-type': 'application/json' } }) : new Response('{}', { status: 404 });
@@ -86,8 +97,21 @@ test('validação: método, limite de 20 e chave ausente', async () => {
   assert.equal(res.statusCode, 400);
 
   delete process.env.BRAVE_API_KEY;
+  delete process.env.SERPER_API_KEY;
   res = fakeRes();
   await handler({ method: 'GET', headers: {}, query: { q: 'baterias luxfor rio verde' } }, res);
   assert.equal(res.statusCode, 503);
   assert.equal(JSON.stringify(res).includes('chave-de-teste'), false);
+});
+
+test('Serper (Google) tem prioridade quando SERPER_API_KEY existe', async () => {
+  process.env.SERPER_API_KEY = 'chave-serper';
+  const res = fakeRes();
+  await handler({ method: 'POST', headers: {}, body: { empresas: 'baterias luxfor rio verde' } }, res);
+  assert.equal(res.statusCode, 200);
+  const { resultados } = JSON.parse(res.corpo);
+  assert.equal(resultados[0].empresa.cnpj_formatado, '03.373.661/0001-50');
+  assert.equal(resultados[0].instagram.url, 'https://www.instagram.com/bateriasluxfor.ltda/');
+  assert.equal(urls.some((u) => u.includes('api.search.brave.com')), false);
+  assert.equal(urls.filter((u) => u.startsWith('https://google.serper.dev')).length, 2);
 });
