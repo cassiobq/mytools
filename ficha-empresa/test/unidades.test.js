@@ -116,3 +116,29 @@ test('Maps: link pelo endereço oficial com encodeURIComponent e ftid único', (
   assert.equal(extrairFtid('<a href="https://maps.google.com/?ftid=0x935a1b2c3d4e5f60:0x1a2b3c4d5e6f7a8b">'), '0x935a1b2c3d4e5f60:0x1a2b3c4d5e6f7a8b');
   assert.equal(extrairFtid('ftid=0x1111111111:0x2222222222 e ftid=0x3333333333:0x4444444444'), null);
 });
+
+test('Instagram: @ com as palavras específicas do nome é aceito; genérico sem confirmação não', () => {
+  const ok = encontrarInstagram([
+    { titulo: 'Drogaria (@dupovopopular.bj)', url: 'https://www.instagram.com/dupovopopular.bj/' },
+  ], 'farmacia du povo popular', 'Bom Jesus de Goiás');
+  assert.equal(ok.url, 'https://www.instagram.com/dupovopopular.bj/');
+
+  // Uma só palavra específica ("popular") e sem citar a cidade: não arrisca.
+  const fraco = encontrarInstagram([
+    { titulo: 'Rede Popular', url: 'https://www.instagram.com/redepopular/', descricao: 'Anápolis' },
+  ], 'farmacia popular', 'Rio Verde');
+  assert.equal(fraco.status, 'nao_encontrado');
+  assert.equal(fraco.descartados[0].usuario, '@redepopular');
+
+  // Mesma palavra, mas o perfil cita a cidade: aceita.
+  const comCidade = encontrarInstagram([
+    { titulo: 'Farmácia Popular', url: 'https://www.instagram.com/redepopular/', descricao: 'Rio Verde - GO' },
+  ], 'farmacia popular', 'Rio Verde');
+  assert.equal(comCidade.status, 'ok');
+
+  // Título do perfil com o nome inteiro, @ diferente.
+  const titulo = encontrarInstagram([
+    { titulo: 'Farmácia Du Povo Popular (@fdp_bjgo) • Fotos e vídeos do Instagram', url: 'https://www.instagram.com/fdp_bjgo/' },
+  ], 'farmacia du povo popular', 'Bom Jesus de Goiás');
+  assert.equal(titulo.usuario, '@fdp_bjgo');
+});

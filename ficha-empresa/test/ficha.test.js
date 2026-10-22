@@ -171,3 +171,35 @@ test('erro na Receita vira status erro', async () => {
   assert.equal(f.etapas.receita.status, 'erro');
   assert.equal(f.empresa.status, 'erro');
 });
+
+test('Instagram fora da 1ª busca: faz busca extra "nome cidade instagram"', async () => {
+  const chamadas = [];
+  const deps = {
+    buscarWeb: async (q) => {
+      chamadas.push(q);
+      if (q.endsWith(' instagram')) {
+        return [{ titulo: 'Farmácia Du Povo Popular (@farmaciadupovopopular)', url: 'https://www.instagram.com/farmaciadupovopopular/', descricao: '' }];
+      }
+      return [];
+    },
+    consultarReceita: async () => null,
+    buscarFtidNoSite: async () => null,
+  };
+  const f = await gerarFicha(parseLinha('farmácia du povo popular bom jesus de goiás'), deps);
+  assert.deepEqual(chamadas, [
+    'farmácia du povo popular bom jesus de goiás',
+    'farmácia du povo popular Bom Jesus de Goiás instagram',
+    'farmácia du povo popular bom jesus de goiás CNPJ',
+  ]);
+  assert.equal(f.instagram.url, 'https://www.instagram.com/farmaciadupovopopular/');
+});
+
+test('com Instagram na 1ª busca, não gasta busca extra', async () => {
+  const chamadas = [];
+  const deps = mockDeps({
+    chamadas,
+    busca1: [{ titulo: 'Baterias Luxfor', url: 'https://www.instagram.com/bateriasluxfor.ltda/' }],
+  });
+  await gerarFicha(parseLinha('baterias luxfor rio verde'), deps);
+  assert.equal(chamadas.length, 2);
+});

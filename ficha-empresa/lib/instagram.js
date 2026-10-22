@@ -1,5 +1,5 @@
 // Escolhe o perfil de Instagram entre os resultados de busca. Nunca chuta: sem certeza, null.
-import { compactar, tokensSignificativos, normalizar } from './texto.js';
+import { compactar, tokensSignificativos, normalizar, ehGenerica } from './texto.js';
 
 const RESERVADOS = new Set([
   'p', 'reel', 'reels', 'tv', 'explore', 'stories', 'accounts', 'about', 'directory', 'developer',
@@ -22,32 +22,46 @@ export function usuarioDoPerfil(url) {
   return usuario;
 }
 
-// "Relação clara": todos os tokens significativos do nome aparecem no @ (sem pontos/underscores)
-// ou o título traz o nome inteiro junto com o mesmo @.
-function avaliar(nome, usuario, titulo) {
+// "Relação clara" com o nome (do mais forte para o mais fraco):
+//  3: todas as palavras do nome estão no @ (sem pontos/underscores);
+//  2: as palavras específicas (não genéricas como "farmácia") estão no @, e há confirmação:
+//     2+ palavras específicas ou a cidade aparece no @/título/descrição;
+//  1: o título do perfil traz o nome inteiro.
+// Abaixo disso, o perfil é descartado (nunca chuta um @).
+function avaliar(nome, cidade, r, usuario) {
   const tokens = tokensSignificativos(nome);
-  if (!tokens.length) return 0;
+  if (!tokens.length) return { nota: 0, motivo: 'nome vazio' };
+  const especificos = tokens.filter((t) => !ehGenerica(t));
   const userCompacto = compactar(usuario);
-  if (tokens.every((t) => userCompacto.includes(t))) return 2;
-  const tituloNorm = normalizar(titulo);
-  const tituloTemUsuario = tituloNorm.includes(normalizar(usuario)) || compactar(titulo).includes(userCompacto);
-  if (tituloTemUsuario && tokens.every((t) => tituloNorm.split(' ').includes(t))) return 1;
-  return 0;
+  const tituloTokens = new Set(normalizar(r.titulo).split(' '));
+  const cidadeCompacta = compactar(cidade);
+  const textoPerfil = compactar(`${usuario} ${r.titulo} ${r.descricao ?? ''}`);
+  const citaCidade = cidadeCompacta.length >= 4 && textoPerfil.includes(cidadeCompacta);
+
+  if (tokens.every((t) => userCompacto.includes(t))) return { nota: 3, motivo: '' };
+  const especificosNoUsuario = especificos.length > 0 && especificos.every((t) => userCompacto.includes(t));
+  if (especificosNoUsuario && especificos.join('').length >= 5 && (especificos.length >= 2 || citaCidade)) {
+    return { nota: 2, motivo: '' };
+  }
+  if (tokens.every((t) => tituloTokens.has(t))) return { nota: 1, motivo: '' };
+  return { nota: 0, motivo: 'nome não confere com o perfil' };
 }
 
-export function encontrarInstagram(resultados, nome) {
+export function encontrarInstagram(resultados, nome, cidade = '') {
   const vistos = new Map();
   for (const r of resultados ?? []) {
     const usuario = usuarioDoPerfil(r.url);
     if (!usuario || vistos.has(usuario)) continue;
-    vistos.set(usuario, avaliar(nome, usuario, r.titulo));
+    vistos.set(usuario, { ...avaliar(nome, cidade, r, usuario), titulo: r.titulo ?? '' });
   }
-  // Prefere match pelo @; entre iguais, mantém a ordem da busca.
-  for (const nivel of [2, 1]) {
-    const achado = [...vistos].find(([, nota]) => nota === nivel);
-    if (achado) {
-      return { status: 'ok', url: `https://www.instagram.com/${achado[0]}/`, usuario: `@${achado[0]}`, mensagem: '' };
-    }
+  // Prefere a nota mais alta; entre iguais, mantém a ordem da busca.
+  const ordenados = [...vistos].filter(([, v]) => v.nota > 0).sort((a, b) => b[1].nota - a[1].nota);
+  const descartados = [...vistos]
+    .filter(([, v]) => v.nota === 0)
+    .map(([usuario, v]) => ({ usuario: `@${usuario}`, titulo: v.titulo, motivo: v.motivo }));
+  if (ordenados.length) {
+    const [usuario] = ordenados[0];
+    return { status: 'ok', url: `https://www.instagram.com/${usuario}/`, usuario: `@${usuario}`, mensagem: '', descartados };
   }
-  return { status: 'nao_encontrado', url: null, usuario: null, mensagem: 'não encontrado' };
+  return { status: 'nao_encontrado', url: null, usuario: null, mensagem: 'não encontrado', descartados };
 }

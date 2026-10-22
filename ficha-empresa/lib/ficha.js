@@ -27,7 +27,7 @@ function fichaVazia(item) {
     etapas: { busca_web: st('pendente'), busca_cnpj: st('pendente'), receita: st('pendente') },
     empresa: { status: 'nao_encontrado', mensagem: 'não encontrado' },
     socio: { status: 'nao_encontrado', nome: null, origem: null, mensagem: 'não encontrado' },
-    instagram: { status: 'nao_encontrado', url: null, usuario: null, mensagem: 'não encontrado' },
+    instagram: { status: 'nao_encontrado', url: null, usuario: null, mensagem: 'não encontrado', descartados: [] },
     maps: { status: 'nao_encontrado', url: null, origem: null, mensagem: 'não encontrado' },
     ambiguo: false,
     outros_candidatos: [],
@@ -81,7 +81,7 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   try {
     r1 = await buscarWeb(item.entrada);
     ficha.etapas.busca_web = st('ok', `${r1.length} resultados`);
-    ficha.instagram = encontrarInstagram(r1, item.nome);
+    ficha.instagram = encontrarInstagram(r1, item.nome, item.cidade);
   } catch (e) {
     ficha.etapas.busca_web = st('erro', msgErro(e));
     ficha.instagram = { status: 'erro', url: null, usuario: null, mensagem: 'falha na busca' };
@@ -90,6 +90,19 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   // Roda em paralelo com as etapas seguintes.
   const site = acharSiteDaEmpresa(r1, item.nome);
   const ftidPromise = site ? buscarFtidNoSite(site) : Promise.resolve(null);
+
+  // 1b) Instagram fora da primeira página: uma busca extra só para ele.
+  if (ficha.instagram.status === 'nao_encontrado') {
+    try {
+      const rInsta = await buscarWeb(`${item.nome} ${item.cidade} instagram`);
+      const novo = encontrarInstagram(rInsta, item.nome, item.cidade);
+      const vistos = new Set(ficha.instagram.descartados.map((d) => d.usuario));
+      novo.descartados = [...ficha.instagram.descartados, ...novo.descartados.filter((d) => !vistos.has(d.usuario))];
+      ficha.instagram = novo;
+    } catch {
+      // Mantém "não encontrado"; a falha da busca extra não afeta o resto.
+    }
+  }
 
   // 2) Busca com "CNPJ": candidatos de 14 dígitos validados pelo DV.
   aoMudarEtapa('busca_cnpj');

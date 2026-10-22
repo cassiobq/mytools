@@ -31,6 +31,10 @@ const GENERICAS = new Set([
   'grupo', 'empresa', 'brasil', 'goias', 'representacoes', 'atacado', 'atacadista', 'varejo',
 ]);
 
+export function ehGenerica(token) {
+  return GENERICAS.has(token);
+}
+
 export function tokensSignificativos(s) {
   return normalizar(s).split(' ').filter((t) => t && !STOPWORDS.has(t));
 }

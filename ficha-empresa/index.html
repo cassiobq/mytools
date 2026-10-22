@@ -195,6 +195,12 @@
       `<li><span class="mono">${esc(c.cnpj_formatado)}</span>${c.nome ? ' — ' + esc(c.nome) : ''}${c.municipio ? ' (' + esc(c.municipio) + ')' : ''}${c.situacao ? ' · ' + esc(c.situacao) : ''}: ${esc(c.motivo)}</li>`).join('')}</ul></details>`;
   }
 
+  function listaPerfis(itens) {
+    if (!itens?.length) return '';
+    return `<details><summary>Perfis do Instagram descartados (${itens.length})</summary><ul>${itens.map((p) =>
+      `<li>${esc(p.usuario)}${p.titulo ? ' — ' + esc(p.titulo) : ''}: ${esc(p.motivo)}</li>`).join('')}</ul></details>`;
+  }
+
   function linhaResultado(f) {
     const e = f.empresa || {};
     const ok = e.status === 'ok';
@@ -211,7 +217,7 @@
       : `<span class="vazio">${esc(f.socio?.mensagem || 'não encontrado')}</span>`;
     return `<tr class="${classes}">
       <td data-rotulo="Nome"><div class="cel"><span class="nome">${nome}</span>${selos ? '<br>' + selos : ''}<span class="entrada">${esc(f.entrada)}</span>
-        ${listaCandidatos('Outros CNPJs que conferem', f.outros_candidatos)}${listaCandidatos('Candidatos descartados', f.candidatos_descartados)}</div></td>
+        ${listaCandidatos('Outros CNPJs que conferem', f.outros_candidatos)}${listaCandidatos('Candidatos descartados', f.candidatos_descartados)}${listaPerfis(f.instagram?.descartados)}</div></td>
       <td data-rotulo="Sócio"><div class="cel">${socio}</div></td>
       <td data-rotulo="Instagram"><div class="cel">${celulaLink(f.instagram, f.instagram?.usuario)}</div></td>
       <td data-rotulo="Maps"><div class="cel">${celulaLink(f.maps, 'Abrir no Maps')}</div></td>
@@ -292,10 +298,12 @@
   const celulaTsv = (s) => String(s ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 
   $('copiar').addEventListener('click', async () => {
-    const linhas = [['Nome fantasia', 'Sócio', 'Instagram', 'Maps']];
+    // Sem cabeçalho, na ordem da planilha: Empresa, Segmento (vazio), Responsável, Site (Instagram), Local (Maps).
+    const linhas = [];
     for (const f of fichas.filter(Boolean)) {
       linhas.push([
         f.empresa?.status === 'ok' ? f.empresa.nome_exibido : `${f.entrada} (não encontrado)`,
+        '',
         f.socio?.status === 'ok' ? f.socio.nome : 'não encontrado',
         f.instagram?.status === 'ok' ? f.instagram.url : 'não encontrado',
         f.maps?.status === 'ok' ? f.maps.url : 'não encontrado',
@@ -309,7 +317,7 @@
       t.value = tsv; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
       document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
     }
-    status.textContent = `Copiado: ${linhas.length - 1} linha(s). Cole na planilha.`;
+    status.textContent = `Copiado: ${linhas.length} linha(s). Cole na coluna Empresa da planilha.`;
   });
 })();
 </script>

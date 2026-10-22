@@ -81,3 +81,7 @@ Limites: 8 s por chamada externa, 3 empresas em paralelo, 20 empresas por requis
 ## Link do Maps
 
 `https://www.google.com/maps/search/?api=1&query=` + nome fantasia, logradouro, número, município e UF da Receita. Se o site oficial da empresa tiver um único identificador de local (`ftid` `0x...:0x...`), o link vira `https://www.google.com/maps?ftid=...`. Links `maps.app.goo.gl` não são gerados, porque só o botão Compartilhar do Google cria esses links.
+
+## Copiar para planilha
+
+O botão copia as linhas **sem cabeçalho**, separadas por tabulação, nesta ordem: Empresa, Segmento (vazio), Responsável (sócio), Site (Instagram), Local (Maps). Cole na primeira coluna da planilha.
