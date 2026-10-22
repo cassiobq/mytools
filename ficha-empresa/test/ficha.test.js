@@ -204,3 +204,54 @@ test('com Instagram na 1ª busca, não gasta busca extra', async () => {
   await gerarFicha(parseLinha('baterias luxfor rio verde'), deps);
   assert.equal(chamadas.length, 2);
 });
+
+// Caso real: loja da bandeira "Rede Construção" que na Receita se chama "GEMEOS PRESTACAO DE SERVICOS".
+const GEMEOS = {
+  cnpj: '25238010000190', municipio: 'BOM JESUS DE GOIAS', uf: 'GO', situacao_cadastral: 2, descricao_situacao_cadastral: 'ATIVA',
+  nome_fantasia: 'GEMEOS PRESTACAO DE SERVICOS', razao_social: 'GEMEOS PRESTACAO DE SERVICOS ELETRICOS E ELETRONICOS LTDA',
+  logradouro: 'TRANCREDO RODRIGUES DA CUNHA', numero: '514', ddd_telefone_1: '6436081234', qsa: [{ nome_socio: 'FULANO GEMEOS' }],
+};
+const LOCAL_GEMEOS = {
+  titulo: 'Rede Construcao - Gemeos', endereco: 'R. João Rodrigues da Cunha Júnior, 514 - Bom Jesus de Goiás - GO, 75570-000',
+  telefone: '', site: 'https://www.instagram.com/gemeosmateriais/', cid: '1234567890123456789',
+};
+
+function depsGemeos(local, dados = GEMEOS) {
+  return {
+    buscarWeb: async (q) => (q.endsWith(' CNPJ') ? [{ titulo: 'Gemeos 25.238.010/0001-90', url: 'https://a.com', descricao: '' }] : []),
+    buscarLocal: async () => [local],
+    consultarReceita: async () => dados,
+    buscarFtidNoSite: async () => null,
+  };
+}
+
+test('nome diferente na Receita, confirmado pelo endereço do Google Maps', async () => {
+  const f = await gerarFicha(parseLinha('Rede Construcao - Gemeos', { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), depsGemeos(LOCAL_GEMEOS));
+  assert.equal(f.empresa.status, 'ok');
+  assert.equal(f.empresa.cnpj_formatado, '25.238.010/0001-90');
+  assert.equal(f.empresa.confirmacao, 'endereço');
+  assert.equal(f.socio.nome, 'FULANO GEMEOS');
+  assert.equal(f.maps.url, 'https://maps.google.com/?cid=1234567890123456789');
+  assert.equal(f.instagram.url, 'https://www.instagram.com/gemeosmateriais/');
+});
+
+test('confirmação por telefone; sem confirmação o CNPJ continua descartado', async () => {
+  const comTelefone = { ...LOCAL_GEMEOS, endereco: 'Bom Jesus de Goiás - GO', telefone: '(64) 3608-1234' };
+  const f = await gerarFicha(parseLinha('Rede Construcao - Gemeos', { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), depsGemeos(comTelefone));
+  assert.equal(f.empresa.confirmacao, 'telefone');
+
+  const semNada = { ...LOCAL_GEMEOS, endereco: 'Av. Outra, 99 - Bom Jesus de Goiás - GO', telefone: '(64) 9999-0000' };
+  const g = await gerarFicha(parseLinha('Rede Construcao - Gemeos', { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), depsGemeos(semNada));
+  assert.equal(g.empresa.status, 'nao_encontrado');
+  assert.equal(g.candidatos_descartados[0].motivo, 'nome diferente do digitado');
+  // O link do Maps vem do lugar do Google mesmo sem CNPJ.
+  assert.equal(g.maps.status, 'ok');
+});
+
+test('lugar do Google de outra cidade ou outro nome é ignorado', async () => {
+  const outraCidade = { ...LOCAL_GEMEOS, endereco: 'R. João Rodrigues da Cunha Júnior, 514 - Jataí - GO' };
+  const f = await gerarFicha(parseLinha('Rede Construcao - Gemeos', { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), depsGemeos(outraCidade));
+  assert.equal(f.local, null);
+  assert.equal(f.empresa.status, 'nao_encontrado');
+  assert.equal(f.maps.status, 'nao_encontrado');
+});

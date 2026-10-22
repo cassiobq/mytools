@@ -8,6 +8,11 @@ Fluxo da função `api/ficha.js`, por empresa:
 2. Busca na web com o texto + `CNPJ`: candidatos de 14 dígitos validados pelo dígito verificador.
 3. [Minha Receita](https://docs.minhareceita.org/) (`GET https://minhareceita.org/{cnpj}`) para até 5 candidatos. Só é aceito um CNPJ cuja cidade bate com a digitada e cujo nome é parecido. Se mais de um conferir, fica o ativo e a ficha sai marcada como `ambiguo`.
 
+Com o Serper, a ferramenta também consulta o **Google Maps** (endpoint `/places`, 1 crédito por empresa) para achar o estabelecimento pelo nome e cidade. Isso dá:
+- um link do Maps exato (`https://maps.google.com/?cid=...`);
+- o Instagram, quando é o site cadastrado no Google;
+- a confirmação de CNPJ quando o nome na Receita é diferente do nome da loja (bandeiras e franquias, como "Rede Construção - Gêmeos"): o CNPJ da mesma cidade é aceito se o telefone ou o endereço (número e rua) bater com o do Google. A ficha mostra "confirmado pelo telefone/endereço no Google".
+
 Nenhum dado é inventado. O que não for encontrado com segurança volta como `nao_encontrado`.
 
 ## Estrutura

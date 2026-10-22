@@ -225,6 +225,7 @@
       : `<span class="${e.status === 'erro' ? 'falha' : 'vazio'}">${esc(e.mensagem || 'não encontrado')}</span>`;
     const selos = [
       f.ambiguo ? '<span class="selo ambiguo">AMBÍGUO</span>' : '',
+      e.confirmacao ? `<span class="selo info" title="O nome na Receita é diferente; o ${esc(e.confirmacao)} bate com o do Google Maps">confirmado pelo ${esc(e.confirmacao)} no Google</span>` : '',
       f.cidade_inferida ? `<span class="selo info" title="Cidade deduzida do fim do texto">cidade: ${esc(f.cidade)}</span>` : '',
     ].join('');
     const socio = f.socio?.status === 'ok'

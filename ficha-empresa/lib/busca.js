@@ -6,6 +6,7 @@ import { fetchComTimeout, esperar } from './http.js';
 
 const BRAVE_URL = 'https://api.search.brave.com/res/v1/web/search';
 const SERPER_URL = 'https://google.serper.dev/search';
+const SERPER_PLACES_URL = 'https://google.serper.dev/places';
 
 // Intervalo mínimo entre chamadas à Brave dentro da mesma instância da função
 // (planos com limite de requisições por segundo). Ajustável por BRAVE_INTERVALO_MS.
@@ -96,6 +97,27 @@ async function buscarBrave(query, chave) {
     }));
   }
   throw new Error('busca recusada por limite de requisições (HTTP 429)');
+}
+
+// Lugares do Google Maps (só Serper): [{ titulo, endereco, telefone, site, cid, categoria }].
+// Com o Brave, devolve [] (sem equivalente).
+export async function buscarLocal(query) {
+  if (provedorConfigurado() !== 'serper') return [];
+  const resp = await fetchComTimeout(SERPER_PLACES_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.SERPER_API_KEY },
+    body: JSON.stringify({ q: query, gl: 'br', hl: 'pt-br' }),
+  });
+  if (!resp.ok) throw new Error(`busca de lugares respondeu HTTP ${resp.status}`);
+  const json = await resp.json();
+  return (json?.places ?? []).map((p) => ({
+    titulo: p.title ?? '',
+    endereco: p.address ?? '',
+    telefone: p.phoneNumber ?? p.phone ?? '',
+    site: p.website ?? '',
+    cid: p.cid ? String(p.cid) : '',
+    categoria: p.category ?? '',
+  }));
 }
 
 // Texto bruto de um resultado, para regex (CNPJ, ftid).

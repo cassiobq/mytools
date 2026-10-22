@@ -113,7 +113,8 @@ test('Serper (Google) tem prioridade quando SERPER_API_KEY existe', async () => 
   assert.equal(resultados[0].empresa.cnpj_formatado, '03.373.661/0001-50');
   assert.equal(resultados[0].instagram.url, 'https://www.instagram.com/bateriasluxfor.ltda/');
   assert.equal(urls.some((u) => u.includes('api.search.brave.com')), false);
-  assert.equal(urls.filter((u) => u.startsWith('https://google.serper.dev')).length, 2);
+  assert.equal(urls.filter((u) => u === 'https://google.serper.dev/search').length, 2);
+  assert.equal(urls.filter((u) => u === 'https://google.serper.dev/places').length, 1);
 });
 
 test('API aceita o campo cidade (POST e GET)', async () => {
