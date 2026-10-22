@@ -226,3 +226,20 @@ test('nome fantasia contido no nome digitado longo', async () => {
   assert.equal(nomeContido('POLIVET', 'casa agropecuaria boi gordo'), false);
   assert.equal(nomeContido('', longo), false);
 });
+
+test('Instagram: dono de posts e reels (link, título e "usuario on data")', async () => {
+  const { donoDoResultado } = await import('../lib/instagram.js');
+  assert.equal(donoDoResultado({ url: 'https://www.instagram.com/lojasconstrumil/reel/DAbc123/' }), 'lojasconstrumil');
+  assert.equal(donoDoResultado({ url: 'https://www.instagram.com/p/DAbc123/', titulo: 'A Construmil (@lojasconstrumil) • Instagram' }), 'lojasconstrumil');
+  assert.equal(donoDoResultado({
+    url: 'https://www.instagram.com/reel/DAbc123/', titulo: 'A melhor loja Agropecuária de Bom Jesus, é ...',
+    descricao: '64 likes, 11 comments - polivetbomjesus on December 28, 2024: "A melhor loja ... @polivetitumbiara',
+  }), 'polivetbomjesus');
+  assert.equal(donoDoResultado({ url: 'https://www.instagram.com/p/DAbc123/', descricao: 'veja @outraloja' }), null);
+
+  // Só posts nos resultados: acha pelo dono.
+  const r = encontrarInstagram([
+    { url: 'https://www.instagram.com/reel/X1/', titulo: 'Promoção', descricao: 'lojasconstrumil on March 3, 2025: "Promoção de cimento"' },
+  ], ['A Construmil', 'A CONSTRUMIL'], 'Bom Jesus de Goiás');
+  assert.equal(r.url, 'https://www.instagram.com/lojasconstrumil/');
+});
