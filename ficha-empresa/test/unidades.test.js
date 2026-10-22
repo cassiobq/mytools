@@ -142,3 +142,13 @@ test('Instagram: @ com as palavras específicas do nome é aceito; genérico sem
   ], 'farmacia du povo popular', 'Bom Jesus de Goiás');
   assert.equal(titulo.usuario, '@fdp_bjgo');
 });
+
+test('Instagram: caso real "farmacia du povo popular bom jesus de goias"', () => {
+  // Resultados reais da busca (Google via Serper), em 22/10/2026.
+  const r = encontrarInstagram([
+    { titulo: 'Farmácia DuPovo Popular (@farmaciadupovobomjesus)', url: 'https://www.instagram.com/farmaciadupovobomjesus/' },
+    { titulo: 'Farmácia Asfar Popular Bom Jesus ...', url: 'https://www.instagram.com/asfarpopularbomjesus/' },
+  ], 'farmácia du povo popular', 'Bom Jesus de Goiás');
+  assert.equal(r.url, 'https://www.instagram.com/farmaciadupovobomjesus/');
+  assert.deepEqual(r.descartados.map((d) => d.usuario), ['@asfarpopularbomjesus']);
+});
