@@ -203,3 +203,8 @@ test('casos reais de Bom Jesus de Goiás: hífen no nome e singular/plural', () 
   // Mesmo bairro de palavras, outra empresa: continua rejeitado.
   assert.equal(compararNomes('Rede Construcao Gemeos', 'GEMEOS PRESTACAO DE SERVICOS GEMEOS PRESTACAO DE SERVICOS ELETRICOS E ELETRONICOS LTDA').parecido, false);
 });
+
+test('Instagram: @casa.brasilia para "Casa Brasília Materiais Para Construção"', () => {
+  const r = encontrarInstagram([{ titulo: 'Casa Brasília', url: 'https://www.instagram.com/casa.brasilia/' }], 'Casa Brasília Materiais Para Construção', 'Bom Jesus de Goiás');
+  assert.equal(r.usuario, '@casa.brasilia');
+});

@@ -25,7 +25,8 @@ export function usuarioDoPerfil(url) {
 // "Relação clara" com o nome (do mais forte para o mais fraco):
 //  3: todas as palavras do nome estão no @ (sem pontos/underscores);
 //  2: as palavras específicas (não genéricas como "farmácia") estão no @, e há confirmação:
-//     2+ palavras específicas ou a cidade aparece no @/título/descrição;
+//     2+ palavras específicas, a cidade no @/título/descrição, ou também uma palavra genérica do
+//     nome no @ (ex.: @casa.brasilia para "Casa Brasília Materiais Para Construção");
 //  1: o título do perfil traz o nome inteiro (com ou sem espaços entre as palavras).
 // Abaixo disso, o perfil é descartado (nunca chuta um @).
 function avaliar(nome, cidade, r, usuario) {
@@ -40,7 +41,8 @@ function avaliar(nome, cidade, r, usuario) {
 
   if (tokens.every((t) => userCompacto.includes(t))) return { nota: 3, motivo: '' };
   const especificosNoUsuario = especificos.length > 0 && especificos.every((t) => userCompacto.includes(t));
-  if (especificosNoUsuario && especificos.join('').length >= 5 && (especificos.length >= 2 || citaCidade)) {
+  const genericaNoUsuario = tokens.some((t) => ehGenerica(t) && t.length >= 4 && userCompacto.includes(t));
+  if (especificosNoUsuario && especificos.join('').length >= 5 && (especificos.length >= 2 || citaCidade || genericaNoUsuario)) {
     return { nota: 2, motivo: '' };
   }
   // Título com o nome inteiro, palavra a palavra ou junto ("Farmácia DuPovo Popular").
