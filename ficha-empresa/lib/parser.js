@@ -26,9 +26,46 @@ function separarUfFinal(texto) {
   return { texto, uf: null };
 }
 
-export function parseLinha(linhaBruta) {
+// Campo "Cidade" da tela: "Rio Verde", "rio verde/GO", "Uberlândia - MG". Vazio -> null.
+export function parseCidade(textoBruto) {
+  const texto = sanitizarLinha(textoBruto).slice(0, 60);
+  if (!texto) return null;
+  const oficial = CIDADES_NORMALIZADAS.get(normalizar(texto));
+  if (oficial) return { cidade: oficial, uf: 'GO' };
+  const m = texto.match(/^(.*\S)(?:\s*[\/,|]\s*|\s+-\s+|\s+)([A-Za-z]{2})$/);
+  if (m && UFS.has(m[2].toLowerCase())) {
+    const nome = m[1].replace(/[\s|,-]+$/, '');
+    return { cidade: CIDADES_NORMALIZADAS.get(normalizar(nome)) ?? nome, uf: m[2].toUpperCase() };
+  }
+  return { cidade: texto, uf: null };
+}
+
+const temSeparador = (texto) => ['|', ' - ', ','].some((sep) => texto.includes(sep));
+
+// Linha só com o nome, usando a cidade do campo. Se a pessoa repetiu a cidade (e a UF) no fim, ela sai do nome.
+function linhaComCidadePadrao(entrada, padrao) {
+  const cidadeNorm = normalizar(padrao.cidade);
+  // Remove a cidade do fim da lista de palavras, se estiver lá (deixando ao menos 1 palavra).
+  const tirarCidade = (lista) => {
+    for (let k = 1; k < lista.length; k++) {
+      if (normalizar(lista.slice(-k).join(' ')) === cidadeNorm) return lista.slice(0, -k);
+    }
+    return null;
+  };
+  const todas = entrada.split(' ');
+  const ultima = todas[todas.length - 1];
+  const terminaComUf = todas.length > 2 && /^[A-Za-z]{2}$/.test(ultima) && UFS.has(ultima.toLowerCase());
+  const palavras = (terminaComUf && tirarCidade(todas.slice(0, -1))) || tirarCidade(todas) || todas;
+  const nome = palavras.join(' ').trim();
+  if (!nome) return { entrada, nome: '', cidade: padrao.cidade, uf: padrao.uf, cidade_inferida: false, erro: 'Informe o nome da empresa.' };
+  return { entrada: `${nome} ${padrao.cidade}`, nome, cidade: padrao.cidade, uf: padrao.uf, cidade_inferida: false };
+}
+
+export function parseLinha(linhaBruta, cidadePadrao = null) {
   const entrada = sanitizarLinha(linhaBruta);
   const base = { entrada, nome: '', cidade: '', uf: null, cidade_inferida: false };
+  if (entrada.length < 2) return { ...base, erro: 'Linha muito curta.' };
+  if (cidadePadrao?.cidade && !temSeparador(entrada)) return linhaComCidadePadrao(entrada, cidadePadrao);
   if (entrada.length < 3) return { ...base, erro: 'Linha muito curta.' };
 
   const { texto, uf } = separarUfFinal(entrada);
@@ -68,7 +105,8 @@ export function parseLinha(linhaBruta) {
 }
 
 // Aceita texto (uma por linha) ou array. Lança erro se passar do limite.
-export function parseEntrada(entrada) {
+// cidade (opcional): a cidade do campo da tela, usada nas linhas sem separador.
+export function parseEntrada(entrada, cidade = '') {
   const linhas = (Array.isArray(entrada) ? entrada : String(entrada ?? '').split(/\r?\n/))
     .map((l) => sanitizarLinha(l))
     .filter(Boolean);
@@ -82,5 +120,6 @@ export function parseEntrada(entrada) {
     e.status = 400;
     throw e;
   }
-  return linhas.map(parseLinha);
+  const cidadePadrao = parseCidade(cidade);
+  return linhas.map((l) => parseLinha(l, cidadePadrao));
 }

@@ -74,6 +74,11 @@ Limites: 8 s por chamada externa, 3 empresas em paralelo, 20 empresas por requis
 
 ## Como o input é interpretado
 
+- **Campo Cidade** (recomendado quando a lista é toda de uma cidade): cada linha passa a ser só o nome. Se a cidade for repetida no fim da linha, ela é ignorada. O campo sugere os municípios de Goiás; fora de Goiás, use `Cidade/UF`. A última cidade fica salva no navegador. Na API: `"cidade"` no POST ou `&cidade=` no GET.
+- Uma linha com separador explícito usa a cidade escrita nela, mesmo com o campo preenchido. Útil para uma empresa de outra cidade na mesma lista.
+
+Com o campo vazio:
+
 - Com vírgula, ` - ` ou `|`, a cidade é o último pedaço: `Baterias Luxfor, Rio Verde`.
 - Sem separador, a cidade é o fim do texto. A ferramenta procura o maior final que seja um município de Goiás (lista do IBGE em `lib/cidades-go.js`). Se não achar, usa a última palavra (ou as 3 últimas, em nomes do tipo "X de Y"). Nesse caso a ficha volta com `cidade_inferida: true`.
 - Uma UF no fim (`... Rio Verde/GO`, `... rio verde go`) é reconhecida e usada como filtro.

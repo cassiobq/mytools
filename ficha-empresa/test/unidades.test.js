@@ -166,3 +166,24 @@ test('segmento pelo CNAE principal: tabela, mais específico vence, e descriçã
   assert.deepEqual(segmentoPorCnae(9001901, 'Produção teatral'), { segmento: 'Produção teatral', origem: 'cnae' });
   assert.deepEqual(segmentoPorCnae(null, ''), { segmento: '', origem: null });
 });
+
+test('campo Cidade: linhas só com o nome, cidade repetida removida, separador explícito vence', async () => {
+  const { parseCidade } = await import('../lib/parser.js');
+  assert.deepEqual(parseCidade('rio verde'), { cidade: 'Rio Verde', uf: 'GO' });
+  assert.deepEqual(parseCidade('Uberlândia - MG'), { cidade: 'Uberlândia', uf: 'MG' });
+  assert.deepEqual(parseCidade('jatai/go'), { cidade: 'Jataí', uf: 'GO' });
+  assert.equal(parseCidade('  '), null);
+
+  const r = parseEntrada('baterias luxfor\nbaterias luxfor rio verde\nauto-peças silva Rio Verde GO\nposto x, Jataí\nloja go', 'Rio Verde');
+  assert.deepEqual(r.map((i) => [i.nome, i.cidade, i.cidade_inferida]), [
+    ['baterias luxfor', 'Rio Verde', false],
+    ['baterias luxfor', 'Rio Verde', false],
+    ['auto-peças silva', 'Rio Verde', false],
+    ['posto x', 'Jataí', false],
+    ['loja go', 'Rio Verde', false],
+  ]);
+  // A busca na web usa "nome + cidade".
+  assert.equal(r[0].entrada, 'baterias luxfor Rio Verde');
+  // Sem o campo, nada muda.
+  assert.equal(parseEntrada('baterias luxfor rio verde')[0].cidade_inferida, true);
+});

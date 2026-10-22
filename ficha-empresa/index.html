@@ -28,6 +28,9 @@
   p.sub { margin: 0 0 20px; color: var(--suave); }
   .card { background: var(--card); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   label { display: block; font-weight: 600; margin-bottom: 6px; }
+  .campo-cidade { max-width: 420px; margin-bottom: 16px; }
+  input[type="text"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--bg); color: var(--texto); font: inherit; min-height: 44px; }
+  .opcional { font-weight: 400; color: var(--suave); }
   textarea { width: 100%; min-height: 140px; padding: 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--bg); color: var(--texto); font: inherit; resize: vertical; }
   .dica { font-size: .875rem; color: var(--suave); margin: 6px 0 12px; }
   .acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -90,15 +93,22 @@
 <body>
 <main>
   <h1>Ficha de Empresa</h1>
-  <p class="sub">Nome fantasia, sócio, Instagram e Google Maps a partir de <strong>NOME CIDADE</strong>.</p>
+  <p class="sub">Nome fantasia, segmento, sócio, Instagram e Google Maps a partir do nome da empresa e da cidade.</p>
 
   <section class="card" aria-labelledby="titulo-busca">
     <h2 id="titulo-busca">Empresas</h2>
     <form id="form">
-      <label for="empresas">Uma empresa por linha (máximo 20)</label>
+      <div class="campo-cidade">
+        <label for="cidade">Cidade <span class="opcional">(vale para todas as linhas)</span></label>
+        <input type="text" id="cidade" name="cidade" list="lista-cidades" autocomplete="off" spellcheck="false"
+          maxlength="60" placeholder="Ex.: Rio Verde" aria-describedby="dica-cidade">
+        <datalist id="lista-cidades"></datalist>
+        <p class="dica" id="dica-cidade">Fora de Goiás, inclua a UF: <code>Uberlândia/MG</code>. Deixe em branco para digitar a cidade em cada linha.</p>
+      </div>
+      <label for="empresas">Empresas, uma por linha (máximo 20)</label>
       <textarea id="empresas" name="empresas" spellcheck="false" autocomplete="off"
-        placeholder="baterias luxfor rio verde&#10;Padaria Sol Nascente, Jataí" aria-describedby="dica"></textarea>
-      <p class="dica" id="dica">Formato: <code>NOME CIDADE</code>. Para deixar claro onde começa a cidade, use vírgula, " - " ou "|". Atalho: Ctrl+Enter busca.</p>
+        placeholder="baterias luxfor&#10;farmácia du povo popular" aria-describedby="dica"></textarea>
+      <p class="dica" id="dica">Com a cidade preenchida, digite só o nome. Para uma empresa de outra cidade, use vírgula: <code>Padaria Sol Nascente, Jataí</code>. Atalho: Ctrl+Enter busca.</p>
       <div class="acoes">
         <button type="submit" id="buscar">Buscar</button>
         <span class="status-msg" id="status" role="status" aria-live="polite"></span>
@@ -139,6 +149,11 @@
     ['receita', 'Consultando Receita'],
   ];
   const $ = (id) => document.getElementById(id);
+  const CIDADES_GO = ["Abadia de Goiás","Abadiânia","Acreúna","Adelândia","Água Fria de Goiás","Água Limpa","Águas Lindas de Goiás","Alexânia","Aloândia","Alto Horizonte","Alto Paraíso de Goiás","Alvorada do Norte","Amaralina","Americano do Brasil","Amorinópolis","Anápolis","Anhanguera","Anicuns","Aparecida de Goiânia","Aparecida do Rio Doce","Aporé","Araçu","Aragarças","Aragoiânia","Araguapaz","Arenópolis","Aruanã","Aurilândia","Avelinópolis","Baliza","Barro Alto","Bela Vista de Goiás","Bom Jardim de Goiás","Bom Jesus de Goiás","Bonfinópolis","Bonópolis","Brazabrantes","Britânia","Buriti Alegre","Buriti de Goiás","Buritinópolis","Cabeceiras","Cachoeira Alta","Cachoeira de Goiás","Cachoeira Dourada","Caçu","Caiapônia","Caldas Novas","Caldazinha","Campestre de Goiás","Campinaçu","Campinorte","Campo Alegre de Goiás","Campo Limpo de Goiás","Campos Belos","Campos Verdes","Carmo do Rio Verde","Castelândia","Catalão","Caturaí","Cavalcante","Ceres","Cezarina","Chapadão do Céu","Cidade Ocidental","Cocalzinho de Goiás","Colinas do Sul","Córrego do Ouro","Corumbá de Goiás","Corumbaíba","Cristalina","Cristianópolis","Crixás","Cromínia","Cumari","Damianópolis","Damolândia","Davinópolis","Diorama","Doverlândia","Edealina","Edéia","Estrela do Norte","Faina","Fazenda Nova","Firminópolis","Flores de Goiás","Formosa","Formoso","Gameleira de Goiás","Divinópolis de Goiás","Goianápolis","Goiandira","Goianésia","Goiânia","Goianira","Goiás","Goiatuba","Gouvelândia","Guapó","Guaraíta","Guarani de Goiás","Guarinos","Heitoraí","Hidrolândia","Hidrolina","Iaciara","Inaciolândia","Indiara","Inhumas","Ipameri","Ipiranga de Goiás","Iporá","Israelândia","Itaberaí","Itaguari","Itaguaru","Itajá","Itapaci","Itapirapuã","Itapuranga","Itarumã","Itauçu","Itumbiara","Ivolândia","Jandaia","Jaraguá","Jataí","Jaupaci","Jesúpolis","Joviânia","Jussara","Lagoa Santa","Leopoldo de Bulhões","Luziânia","Mairipotaba","Mambaí","Mara Rosa","Marzagão","Matrinchã","Maurilândia","Mimoso de Goiás","Minaçu","Mineiros","Moiporá","Monte Alegre de Goiás","Montes Claros de Goiás","Montividiu","Montividiu do Norte","Morrinhos","Morro Agudo de Goiás","Mossâmedes","Mozarlândia","Mundo Novo","Mutunópolis","Nazário","Nerópolis","Niquelândia","Nova América","Nova Aurora","Nova Crixás","Nova Glória","Nova Iguaçu de Goiás","Nova Roma","Nova Veneza","Novo Brasil","Novo Gama","Novo Planalto","Orizona","Ouro Verde de Goiás","Ouvidor","Padre Bernardo","Palestina de Goiás","Palmeiras de Goiás","Palmelo","Palminópolis","Panamá","Paranaiguara","Paraúna","Perolândia","Petrolina de Goiás","Pilar de Goiás","Piracanjuba","Piranhas","Pirenópolis","Pires do Rio","Planaltina","Pontalina","Porangatu","Porteirão","Portelândia","Posse","Professor Jamil","Quirinópolis","Rialma","Rianápolis","Rio Quente","Rio Verde","Rubiataba","Sanclerlândia","Santa Bárbara de Goiás","Santa Cruz de Goiás","Santa Fé de Goiás","Santa Helena de Goiás","Santa Isabel","Santa Rita do Araguaia","Santa Rita do Novo Destino","Santa Rosa de Goiás","Santa Tereza de Goiás","Santa Terezinha de Goiás","Santo Antônio da Barra","Santo Antônio de Goiás","Santo Antônio do Descoberto","São Domingos","São Francisco de Goiás","São João d'Aliança","São João da Paraúna","São Luís de Montes Belos","São Luiz do Norte","São Miguel do Araguaia","São Miguel do Passa Quatro","São Patrício","São Simão","Senador Canedo","Serranópolis","Silvânia","Simolândia","Sítio d'Abadia","Taquaral de Goiás","Teresina de Goiás","Terezópolis de Goiás","Três Ranchos","Trindade","Trombas","Turvânia","Turvelândia","Uirapuru","Uruaçu","Uruana","Urutaí","Valparaíso de Goiás","Varjão","Vianópolis","Vicentinópolis","Vila Boa","Vila Propício"];
+  const campoCidade = $('cidade');
+  $('lista-cidades').innerHTML = CIDADES_GO.map((c) => `<option value="${c}">`).join('');
+  // Lembra a última cidade usada (só neste navegador).
+  try { campoCidade.value = localStorage.getItem('ficha-empresa:cidade') || ''; } catch {}
   const form = $('form'), campo = $('empresas'), botao = $('buscar'), status = $('status'), erroBox = $('erro');
   const lista = $('progresso'), corpo = $('resultado');
   let fichas = [];
@@ -252,6 +267,8 @@
     ev.preventDefault();
     mostrarErro('');
     const linhas = campo.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const cidade = campoCidade.value.trim();
+    try { localStorage.setItem('ficha-empresa:cidade', cidade); } catch {}
     if (!linhas.length) { mostrarErro('Digite pelo menos uma empresa.'); campo.focus(); return; }
     if (linhas.length > MAX) { mostrarErro(`Máximo de ${MAX} empresas por busca (você digitou ${linhas.length}).`); return; }
 
@@ -263,6 +280,9 @@
     status.textContent = `Buscando ${linhas.length} empresa(s)…`;
 
     const aoEvento = (e) => {
+      if (e.tipo === 'inicio') {
+        e.itens.forEach((it, i) => { const el = $(`prog-${i}`)?.querySelector('.prog-nome'); if (el && it.entrada) el.textContent = it.entrada; });
+      }
       if (e.tipo === 'etapa') marcarEtapa(e.indice, e.etapa);
       if (e.tipo === 'resultado') {
         fichas[e.indice] = e.ficha;
@@ -277,7 +297,7 @@
       const resp = await fetch('/api/ficha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson, application/json' },
-        body: JSON.stringify({ empresas: linhas }),
+        body: JSON.stringify({ empresas: linhas, cidade }),
       });
       const tipo = resp.headers.get('content-type') || '';
       if (!resp.ok) {

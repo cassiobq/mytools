@@ -115,3 +115,14 @@ test('Serper (Google) tem prioridade quando SERPER_API_KEY existe', async () => 
   assert.equal(urls.some((u) => u.includes('api.search.brave.com')), false);
   assert.equal(urls.filter((u) => u.startsWith('https://google.serper.dev')).length, 2);
 });
+
+test('API aceita o campo cidade (POST e GET)', async () => {
+  let res = fakeRes();
+  await handler({ method: 'POST', headers: {}, body: { empresas: ['baterias luxfor'], cidade: 'Rio Verde' } }, res);
+  assert.equal(JSON.parse(res.corpo).resultados[0].empresa.cnpj_formatado, '03.373.661/0001-50');
+  assert.ok(urls.some((u) => u.includes('q=baterias+luxfor+Rio+Verde+CNPJ')));
+
+  res = fakeRes();
+  await handler({ method: 'GET', headers: {}, url: '/api/ficha?q=baterias+luxfor&cidade=rio+verde' }, res);
+  assert.equal(JSON.parse(res.corpo).resultados[0].cidade, 'Rio Verde');
+});

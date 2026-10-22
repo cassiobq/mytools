@@ -1,5 +1,5 @@
-// Função serverless (Vercel, Node 24): POST /api/ficha  { "empresas": "linha 1\nlinha 2" | ["...", "..."] }
-// ou GET /api/ficha?q=baterias+luxfor+rio+verde
+// Função serverless (Vercel, Node 24): POST /api/ficha  { "empresas": "linha 1\nlinha 2" | ["...", "..."], "cidade"?: "Rio Verde" }
+// ou GET /api/ficha?q=baterias+luxfor+rio+verde (ou ?q=baterias+luxfor&cidade=Rio+Verde)
 // Com "Accept: application/x-ndjson" responde em streaming (uma linha JSON por evento de progresso).
 import { parseEntrada } from '../lib/parser.js';
 import { processarLista } from '../lib/ficha.js';
@@ -8,15 +8,19 @@ import { provedorConfigurado } from '../lib/busca.js';
 const MAX_CORPO = 8 * 1024;
 const CACHE_CURTO = 'public, max-age=60, s-maxage=120';
 
+// Devolve { empresas, cidade }. "cidade" é o campo opcional da tela (cidade padrão das linhas).
 function lerEntrada(req) {
-  if (req.method === 'GET') return req.query?.q ?? new URL(req.url, 'http://x').searchParams.get('q') ?? '';
+  if (req.method === 'GET') {
+    const params = new URL(req.url ?? '/', 'http://x').searchParams;
+    return { empresas: req.query?.q ?? params.get('q') ?? '', cidade: req.query?.cidade ?? params.get('cidade') ?? '' };
+  }
   let corpo = req.body;
   if (typeof corpo === 'string') {
     if (corpo.length > MAX_CORPO) throw Object.assign(new Error('Requisição grande demais.'), { status: 413 });
     try {
       corpo = JSON.parse(corpo);
     } catch {
-      return corpo; // texto puro: uma empresa por linha
+      return { empresas: corpo, cidade: '' }; // texto puro: uma empresa por linha
     }
   }
   const empresas = corpo?.empresas;
@@ -24,7 +28,10 @@ function lerEntrada(req) {
     throw Object.assign(new Error('Envie "empresas" como texto (uma por linha) ou lista.'), { status: 400 });
   }
   if (JSON.stringify(empresas).length > MAX_CORPO) throw Object.assign(new Error('Requisição grande demais.'), { status: 413 });
-  return Array.isArray(empresas) ? empresas.map((e) => (typeof e === 'string' ? e : '')) : empresas;
+  return {
+    empresas: Array.isArray(empresas) ? empresas.map((e) => (typeof e === 'string' ? e : '')) : empresas,
+    cidade: typeof corpo?.cidade === 'string' ? corpo.cidade : '',
+  };
 }
 
 function enviarErro(res, status, mensagem) {
@@ -41,7 +48,8 @@ export default async function handler(req, res) {
 
   let itens;
   try {
-    itens = parseEntrada(lerEntrada(req));
+    const { empresas, cidade } = lerEntrada(req);
+    itens = parseEntrada(empresas, cidade);
   } catch (e) {
     return enviarErro(res, e.status ?? 400, e.message);
   }
