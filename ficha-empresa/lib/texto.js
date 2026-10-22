@@ -39,6 +39,12 @@ export function tokensSignificativos(s) {
   return normalizar(s).split(' ').filter((t) => t && !STOPWORDS.has(t));
 }
 
+// Singular/plural: construcoes -> construcao, materiais -> material, papeis -> papel, lojas -> loja.
+export function radical(t) {
+  if (t.length <= 3) return t;
+  return t.replace(/(oes|aes)$/, 'ao').replace(/ais$/, 'al').replace(/eis$/, 'el').replace(/([^s])s$/, '$1');
+}
+
 function levenshtein(a, b) {
   if (a === b) return 0;
   const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -63,21 +69,24 @@ function tokenBate(token, candTokens, candCompacto) {
   return false;
 }
 
+const GENERICAS_RADICAIS = new Set([...GENERICAS].map(radical));
+
 // Mede o quanto o nome digitado aparece no texto candidato (0..1) e diz se é "parecido".
 // Parecido = pelo menos 60% dos tokens batem E algum token não genérico bate
 // (evita aceitar "Auto Peças Silva" como "Auto Peças Souza").
 export function compararNomes(nomeDigitado, textoCandidato) {
-  const tokens = tokensSignificativos(nomeDigitado);
+  const tokens = tokensSignificativos(nomeDigitado).map(radical);
   if (!tokens.length) return { score: 0, parecido: false };
-  const candTokens = new Set(tokensSignificativos(textoCandidato));
+  const candTokens = new Set(tokensSignificativos(textoCandidato).map(radical));
   const candCompacto = compactar(textoCandidato);
   const nomeCompacto = tokens.join('');
   if (nomeCompacto.length >= 5 && candCompacto.includes(nomeCompacto)) return { score: 1, parecido: true };
 
   const bateram = tokens.filter((t) => tokenBate(t, candTokens, candCompacto));
   const score = bateram.length / tokens.length;
-  const especificos = tokens.filter((t) => !GENERICAS.has(t));
-  const especificoBateu = especificos.length === 0 || bateram.some((t) => !GENERICAS.has(t));
+  const generica = (t) => GENERICAS_RADICAIS.has(t);
+  const especificos = tokens.filter((t) => !generica(t));
+  const especificoBateu = especificos.length === 0 || bateram.some((t) => !generica(t));
   return { score, parecido: score >= 0.6 && especificoBateu };
 }
 

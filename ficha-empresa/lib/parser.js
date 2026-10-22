@@ -65,7 +65,16 @@ export function parseLinha(linhaBruta, cidadePadrao = null) {
   const entrada = sanitizarLinha(linhaBruta);
   const base = { entrada, nome: '', cidade: '', uf: null, cidade_inferida: false };
   if (entrada.length < 2) return { ...base, erro: 'Linha muito curta.' };
-  if (cidadePadrao?.cidade && !temSeparador(entrada)) return linhaComCidadePadrao(entrada, cidadePadrao);
+  if (cidadePadrao?.cidade) {
+    // Com o campo Cidade, " - " / "," / "|" só separam a cidade se o último pedaço for mesmo uma cidade
+    // ("Padaria X, Jataí", "Loja Y - Uberlândia/MG"). Senão fazem parte do nome ("Casa Brasília - Materiais").
+    if (temSeparador(entrada)) {
+      const r = parseLinha(entrada);
+      const cidadeReconhecida = r.uf || CIDADES_NORMALIZADAS.has(normalizar(r.cidade));
+      if (!r.erro && cidadeReconhecida) return r;
+    }
+    return linhaComCidadePadrao(entrada.replace(/\s*[|,]\s*|\s+-\s+/g, ' '), cidadePadrao);
+  }
   if (entrada.length < 3) return { ...base, erro: 'Linha muito curta.' };
 
   const { texto, uf } = separarUfFinal(entrada);

@@ -187,3 +187,19 @@ test('campo Cidade: linhas só com o nome, cidade repetida removida, separador e
   // Sem o campo, nada muda.
   assert.equal(parseEntrada('baterias luxfor rio verde')[0].cidade_inferida, true);
 });
+
+test('casos reais de Bom Jesus de Goiás: hífen no nome e singular/plural', () => {
+  // Com o campo Cidade, " - " só separa se o último pedaço for cidade.
+  const r = parseEntrada('Casa Brasília - Materiais Para Construção\nRede Construcao - Gemeos\nPadaria X, Jataí\nLoja Y - Uberlândia/MG', 'Bom Jesus de Goiás');
+  assert.deepEqual(r.map((i) => [i.nome, i.cidade]), [
+    ['Casa Brasília Materiais Para Construção', 'Bom Jesus de Goiás'],
+    ['Rede Construcao Gemeos', 'Bom Jesus de Goiás'],
+    ['Padaria X', 'Jataí'],
+    ['Loja Y', 'Uberlândia'],
+  ]);
+  // Dados reais da Receita.
+  assert.equal(compararNomes('Jd Materiais De Construção E Madeireira', 'JD MATERIAIS PARA CONSTRUCOES JD MATERIAIS PARA CONSTRUCOES LTDA').parecido, true);
+  assert.equal(compararNomes('Casa Brasília Materiais Para Construção', 'CASA BRASILIA CASA BRASILIA MATERIAIS DE CONSTRUCAO LTDA').parecido, true);
+  // Mesmo bairro de palavras, outra empresa: continua rejeitado.
+  assert.equal(compararNomes('Rede Construcao Gemeos', 'GEMEOS PRESTACAO DE SERVICOS GEMEOS PRESTACAO DE SERVICOS ELETRICOS E ELETRONICOS LTDA').parecido, false);
+});
