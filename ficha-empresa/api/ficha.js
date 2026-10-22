@@ -1,4 +1,4 @@
-// Função serverless (Vercel, Node 20): POST /api/ficha  { "empresas": "linha 1\nlinha 2" | ["...", "..."] }
+// Função serverless (Vercel, Node 24): POST /api/ficha  { "empresas": "linha 1\nlinha 2" | ["...", "..."] }
 // ou GET /api/ficha?q=baterias+luxfor+rio+verde
 // Com "Accept: application/x-ndjson" responde em streaming (uma linha JSON por evento de progresso).
 import { parseEntrada } from '../lib/parser.js';

@@ -5,7 +5,7 @@
   "description": "Ficha de empresa (nome fantasia, sócio, Instagram, Maps) a partir de NOME CIDADE.",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "test": "node --test",

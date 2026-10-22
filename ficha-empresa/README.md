@@ -14,7 +14,7 @@ Nenhum dado é inventado. O que não for encontrado com segurança volta como `n
 
 ```
 index.html        interface (HTML/CSS/JS puros)
-api/ficha.js      função serverless (Node 20, fetch nativo, sem dependências)
+api/ficha.js      função serverless (Node 24, fetch nativo, sem dependências)
 lib/              parser, CNPJ, busca (buscarWeb), Receita, Instagram, Maps, orquestração
 test/             testes com respostas mockadas (node --test)
 ```
