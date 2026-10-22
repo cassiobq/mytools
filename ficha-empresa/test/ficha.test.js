@@ -255,3 +255,29 @@ test('lugar do Google de outra cidade ou outro nome é ignorado', async () => {
   assert.equal(f.empresa.status, 'nao_encontrado');
   assert.equal(f.maps.status, 'nao_encontrado');
 });
+
+test('caso real Gêmeos: endereço do Google sem cidade, CNPJ confirmado pelo número e rua', async () => {
+  // Dados reais: Google Maps devolveu só a rua; a Receita tem dois "Gêmeos" em Bom Jesus de Goiás.
+  const local = { titulo: 'Rede Construcao - Gemeos', endereco: 'R. João Rodrigues da Cunha Junior, 177', telefone: '', site: '', cid: '98765432109876543' };
+  const certo = {
+    cnpj: '50548235000190', municipio: 'BOM JESUS DE GOIAS', uf: 'GO', situacao_cadastral: 2, descricao_situacao_cadastral: 'ATIVA',
+    nome_fantasia: 'GEMEOS MATERIAS & FERRAGISTA', razao_social: 'GEMEOS MATERIAIS & SEGURANCA ELETRONICA LTDA',
+    logradouro: 'JOAO RODRIGUES DA CUNHA JUNIOR', numero: '177', ddd_telefone_1: '6436083169', cnae_fiscal: 4744099,
+    qsa: [{ nome_socio: 'DIEGO EDUARDO NERIS DA SILVA' }],
+  };
+  const deps = {
+    buscarWeb: async (q) => (q.endsWith(' CNPJ')
+      ? [{ titulo: 'Gemeos 50.548.235/0001-90 e 25.238.010/0001-90', url: 'https://a.com', descricao: '' }]
+      : []),
+    buscarLocal: async () => [local],
+    consultarReceita: async (cnpj) => (cnpj === '50548235000190' ? certo : GEMEOS),
+    buscarFtidNoSite: async () => null,
+  };
+  const f = await gerarFicha(parseLinha('Rede Construcao - Gemeos', { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), deps);
+  assert.equal(f.empresa.cnpj_formatado, '50.548.235/0001-90');
+  assert.equal(f.empresa.confirmacao, 'endereço');
+  assert.equal(f.empresa.segmento, 'Material de Construção');
+  assert.equal(f.socio.nome, 'DIEGO EDUARDO NERIS DA SILVA');
+  assert.equal(f.ambiguo, false);
+  assert.equal(f.maps.url, 'https://maps.google.com/?cid=98765432109876543');
+});

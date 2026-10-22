@@ -1,11 +1,21 @@
 // Lugar do Google Maps (painel da empresa): escolha e confirmação de CNPJ por telefone/endereço.
 import { compararNomes, normalizar } from './texto.js';
 
-// O lugar precisa ter nome parecido com o digitado e estar na cidade informada.
+// Cidade citada no endereço do Google ("Rua X, 10 - Centro, Jataí - GO, 75800-000" -> "Jataí"), se houver.
+export function cidadeDoEndereco(endereco) {
+  const m = String(endereco ?? '').match(/(?:^|[,-])\s*([^,-]+?)\s*-\s*[A-Z]{2}\b(?!.*\s-\s*[A-Z]{2}\b)/);
+  return m ? m[1].trim() : null;
+}
+
+// O lugar precisa ter nome parecido com o digitado e não estar em outra cidade.
+// O Google às vezes devolve só "Rua X, 177", sem a cidade: aceita, porque a busca já foi feita com a cidade.
 export function escolherLocal(locais, nome, cidade) {
   const cidadeNorm = normalizar(cidade);
-  return (locais ?? []).find((l) =>
-    compararNomes(nome, l.titulo).parecido && normalizar(l.endereco).includes(cidadeNorm)) ?? null;
+  return (locais ?? []).find((l) => {
+    if (!compararNomes(nome, l.titulo).parecido) return false;
+    const citada = cidadeDoEndereco(l.endereco);
+    return !citada || normalizar(citada) === cidadeNorm;
+  }) ?? null;
 }
 
 export function linkMapsPorCid(cid) {
