@@ -173,12 +173,12 @@ test('erro na Receita vira status erro', async () => {
   assert.equal(f.empresa.status, 'erro');
 });
 
-test('Instagram fora da 1ª busca: faz busca extra "nome cidade instagram"', async () => {
+test('Instagram fora da 1ª busca: faz busca extra "nome cidade site:instagram.com"', async () => {
   const chamadas = [];
   const deps = {
     buscarWeb: async (q) => {
       chamadas.push(q);
-      if (q.endsWith(' instagram')) {
+      if (q.endsWith(' site:instagram.com')) {
         return [{ titulo: 'Farmácia Du Povo Popular (@farmaciadupovopopular)', url: 'https://www.instagram.com/farmaciadupovopopular/', descricao: '' }];
       }
       return [];
@@ -189,7 +189,7 @@ test('Instagram fora da 1ª busca: faz busca extra "nome cidade instagram"', asy
   const f = await gerarFicha(parseLinha('farmácia du povo popular bom jesus de goiás'), deps);
   assert.deepEqual(chamadas, [
     'farmácia du povo popular bom jesus de goiás',
-    'farmácia du povo popular Bom Jesus de Goiás instagram',
+    'farmácia du povo popular Bom Jesus de Goiás site:instagram.com',
     'farmácia du povo popular bom jesus de goiás CNPJ',
   ]);
   assert.equal(f.instagram.url, 'https://www.instagram.com/farmaciadupovopopular/');

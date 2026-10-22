@@ -91,10 +91,10 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   const site = acharSiteDaEmpresa(r1, item.nome);
   const ftidPromise = site ? buscarFtidNoSite(site) : Promise.resolve(null);
 
-  // 1b) Instagram fora da primeira página: uma busca extra só para ele.
+  // 1b) Instagram fora da primeira página: uma busca extra só no Instagram (site:instagram.com).
   if (ficha.instagram.status === 'nao_encontrado') {
     try {
-      const rInsta = await buscarWeb(`${item.nome} ${item.cidade} instagram`);
+      const rInsta = await buscarWeb(`${item.nome} ${item.cidade} site:instagram.com`);
       const novo = encontrarInstagram(rInsta, item.nome, item.cidade);
       const vistos = new Set(ficha.instagram.descartados.map((d) => d.usuario));
       novo.descartados = [...ficha.instagram.descartados, ...novo.descartados.filter((d) => !vistos.has(d.usuario))];
