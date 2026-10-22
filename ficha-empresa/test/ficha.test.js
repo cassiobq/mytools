@@ -189,8 +189,8 @@ test('Instagram fora da 1ª busca: faz busca extra "nome cidade site:instagram.c
   const f = await gerarFicha(parseLinha('farmácia du povo popular bom jesus de goiás'), deps);
   assert.deepEqual(chamadas, [
     'farmácia du povo popular bom jesus de goiás',
-    'farmácia du povo popular Bom Jesus de Goiás site:instagram.com',
     'farmácia du povo popular bom jesus de goiás CNPJ',
+    'farmácia du povo popular Bom Jesus de Goiás site:instagram.com',
   ]);
   assert.equal(f.instagram.url, 'https://www.instagram.com/farmaciadupovopopular/');
 });
@@ -280,4 +280,48 @@ test('caso real Gêmeos: endereço do Google sem cidade, CNPJ confirmado pelo n�
   assert.equal(f.socio.nome, 'DIEGO EDUARDO NERIS DA SILVA');
   assert.equal(f.ambiguo, false);
   assert.equal(f.maps.url, 'https://maps.google.com/?cid=98765432109876543');
+});
+
+test('caso real Polivet: nome digitado longo, Instagram achado pelo nome fantasia da Receita', async () => {
+  const nome = 'Casa Agropecuária Polivet Medicamentos Ferramentas Vacinas Ração Pet Shop Geradores E Chocadeiras';
+  const polivet = {
+    cnpj: '02687889000152', municipio: 'BOM JESUS DE GOIAS', uf: 'GO', situacao_cadastral: 2, descricao_situacao_cadastral: 'ATIVA',
+    nome_fantasia: 'POLIVET', razao_social: 'POLIVET LTDA', logradouro: 'FREDERICO SARAIVA', numero: '472', cnae_fiscal: 4771704,
+    qsa: [{ nome_socio: 'CLAUDIO HENRIQUE FERREIRA' }],
+  };
+  const chamadas = [];
+  const deps = {
+    buscarWeb: async (q) => {
+      chamadas.push(q);
+      if (q.endsWith(' CNPJ')) return [{ titulo: 'Polivet 02.687.889/0001-52', url: 'https://a.com', descricao: '' }];
+      // Resultado real da 1ª busca: o perfil vem, mas o @ não tem as palavras do nome longo.
+      return [{ titulo: 'Casa agropecuária Polivet (@polivetbomjesus)', url: 'https://www.instagram.com/polivetbomjesus/', descricao: 'Loja Agropecuária Bom Jesus - GO' }];
+    },
+    buscarLocal: async () => [],
+    consultarReceita: async () => polivet,
+    buscarFtidNoSite: async () => null,
+  };
+  const f = await gerarFicha(parseLinha(nome, { cidade: 'Bom Jesus de Goiás', uf: 'GO' }), deps);
+  assert.equal(f.empresa.nome_exibido, 'POLIVET');
+  assert.equal(f.empresa.segmento, 'Agropecuária');
+  assert.equal(f.instagram.url, 'https://www.instagram.com/polivetbomjesus/');
+  assert.equal(chamadas.length, 2); // achou na 1ª busca, sem busca extra
+});
+
+test('busca extra do Instagram usa o nome fantasia (curto) quando a empresa foi identificada', async () => {
+  const chamadas = [];
+  const deps = {
+    buscarWeb: async (q) => {
+      chamadas.push(q);
+      if (q.endsWith(' CNPJ')) return [{ titulo: '03.373.661/0001-50', url: 'https://a.com', descricao: '' }];
+      if (q.endsWith('site:instagram.com')) return [{ titulo: 'Luxfor', url: 'https://www.instagram.com/bateriasluxfor.ltda/' }];
+      return [];
+    },
+    buscarLocal: async () => [],
+    consultarReceita: async () => LUXFOR,
+    buscarFtidNoSite: async () => null,
+  };
+  const f = await gerarFicha(parseLinha('baterias luxfor e acessórios automotivos', { cidade: 'Rio Verde', uf: 'GO' }), deps);
+  assert.equal(chamadas[2], 'BATERIAS LUXFOR Rio Verde site:instagram.com');
+  assert.equal(f.instagram.url, 'https://www.instagram.com/bateriasluxfor.ltda/');
 });

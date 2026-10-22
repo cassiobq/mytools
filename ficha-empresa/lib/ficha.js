@@ -3,7 +3,7 @@
 import { buscarWeb as buscarWebPadrao, buscarLocal as buscarLocalPadrao, textoDoResultado } from './busca.js';
 import { consultarReceita as consultarReceitaPadrao, estaAtiva, resumirEmpresa, extrairSocio } from './receita.js';
 import { extrairCnpjs, validarCnpj, formatarCnpj } from './cnpj.js';
-import { compararNomes, mesmaCidade } from './texto.js';
+import { compararNomes, mesmaCidade, nomeContido } from './texto.js';
 import { encontrarInstagram, usuarioDoPerfil } from './instagram.js';
 import { escolherLocal, confirmarPorLocal, linkMapsPorCid } from './local.js';
 import {
@@ -51,7 +51,10 @@ export function avaliarCandidato(dados, item) {
     return { aceito: false, motivo: `outra UF (${dados.uf})`, score: 0 };
   }
   const { score, parecido } = compararNomes(item.nome, `${dados.nome_fantasia ?? ''} ${dados.razao_social ?? ''}`);
-  if (!parecido) return { aceito: false, motivo: 'nome diferente do digitado', score };
+  if (!parecido) {
+    if (nomeContido(dados.nome_fantasia, item.nome)) return { aceito: true, motivo: '', score: 0.6 };
+    return { aceito: false, motivo: 'nome diferente do digitado', score };
+  }
   return { aceito: true, motivo: '', score };
 }
 
@@ -88,10 +91,8 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   try {
     r1 = await buscarWeb(item.entrada);
     ficha.etapas.busca_web = st('ok', `${r1.length} resultados`);
-    ficha.instagram = encontrarInstagram(r1, item.nome, item.cidade);
   } catch (e) {
     ficha.etapas.busca_web = st('erro', msgErro(e));
-    ficha.instagram = { status: 'erro', url: null, usuario: null, mensagem: 'falha na busca' };
   }
   // ftid só do site oficial da empresa (links do Maps soltos nos resultados podem ser de outro local).
   // Roda em paralelo com as etapas seguintes.
@@ -112,29 +113,8 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
       return null;
     });
 
-  // 1b) Instagram fora da primeira página: uma busca extra só no Instagram (site:instagram.com).
-  if (ficha.instagram.status === 'nao_encontrado') {
-    try {
-      const rInsta = await buscarWeb(`${item.nome} ${item.cidade} site:instagram.com`);
-      const novo = encontrarInstagram(rInsta, item.nome, item.cidade);
-      const vistos = new Set(ficha.instagram.descartados.map((d) => d.usuario));
-      novo.descartados = [...ficha.instagram.descartados, ...novo.descartados.filter((d) => !vistos.has(d.usuario))];
-      ficha.instagram = novo;
-    } catch {
-      // Mantém "não encontrado"; a falha da busca extra não afeta o resto.
-    }
-  }
-
-  // 1c) Site cadastrado no Google Maps que é um perfil do Instagram.
   const local = await localPromise;
   ficha.local = local;
-  const instaDoLocal = local && usuarioDoPerfil(local.site);
-  if (ficha.instagram.status !== 'ok' && instaDoLocal) {
-    ficha.instagram = {
-      status: 'ok', url: `https://www.instagram.com/${instaDoLocal}/`, usuario: `@${instaDoLocal}`,
-      mensagem: 'site cadastrado no Google Maps', descartados: ficha.instagram.descartados ?? [],
-    };
-  }
   const linkCid = local && linkMapsPorCid(local.cid);
   if (linkCid) ficha.maps = { status: 'ok', url: linkCid, origem: 'google_maps', mensagem: '' };
 
@@ -186,6 +166,7 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
       ? st('nao_encontrado', 'sem CNPJ para consultar')
       : todosErro ? st('erro', consultados[0].erro) : st('nao_encontrado', 'nenhum CNPJ confere com nome e cidade');
     if (todosErro) ficha.empresa = { status: 'erro', mensagem: 'falha ao consultar a Receita' };
+    ficha.instagram = await resolverInstagram(ficha, item, r1, buscarWeb);
     return ficha;
   }
 
@@ -201,7 +182,39 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
       ? { status: 'ok', url: linkMapsPorFtid(ftid), origem: 'ftid', mensagem: '' }
       : { status: 'ok', url: linkMapsPorEndereco(empresa), origem: 'endereço', mensagem: '' };
   }
+  ficha.instagram = await resolverInstagram(ficha, item, r1, buscarWeb);
   return ficha;
+}
+
+// Instagram, por último, quando já se sabe quem é a empresa. Compara os perfis com todos os nomes
+// conhecidos: o digitado, o nome fantasia da Receita e o nome no Google Maps (ex.: digitado
+// "Casa Agropecuária Polivet Medicamentos ...", fantasia "POLIVET" -> @polivetbomjesus).
+async function resolverInstagram(ficha, item, r1, buscarWeb) {
+  const local = ficha.local;
+  const nomeOficial = ficha.empresa?.status === 'ok' ? ficha.empresa.nome_fantasia : '';
+  const nomes = [item.nome, nomeOficial, local?.titulo].filter(Boolean);
+
+  // 1) Site cadastrado no Google Maps que é um perfil do Instagram.
+  const doLocal = local && usuarioDoPerfil(local.site);
+  if (doLocal) {
+    return { status: 'ok', url: `https://www.instagram.com/${doLocal}/`, usuario: `@${doLocal}`, mensagem: 'site cadastrado no Google Maps', descartados: [] };
+  }
+  // 2) Perfis da primeira busca.
+  const primeiro = encontrarInstagram(r1, nomes, item.cidade);
+  if (primeiro.status === 'ok') return primeiro;
+  // 3) Busca extra só no Instagram, pelo nome mais curto e oficial que houver.
+  const nomeBusca = nomeOficial || local?.titulo || item.nome;
+  try {
+    const rInsta = await buscarWeb(`${nomeBusca} ${item.cidade} site:instagram.com`);
+    const extra = encontrarInstagram(rInsta, nomes, item.cidade);
+    const vistos = new Set(extra.descartados.map((d) => d.usuario));
+    extra.descartados = [...extra.descartados, ...primeiro.descartados.filter((d) => !vistos.has(d.usuario))];
+    return extra;
+  } catch {
+    return ficha.etapas.busca_web.status === 'erro'
+      ? { status: 'erro', url: null, usuario: null, mensagem: 'falha na busca', descartados: [] }
+      : primeiro;
+  }
 }
 
 // Processa a lista com no máximo MAX_PARALELO empresas ao mesmo tempo.

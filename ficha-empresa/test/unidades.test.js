@@ -208,3 +208,21 @@ test('Instagram: @casa.brasilia para "Casa Brasília Materiais Para Construção
   const r = encontrarInstagram([{ titulo: 'Casa Brasília', url: 'https://www.instagram.com/casa.brasilia/' }], 'Casa Brasília Materiais Para Construção', 'Bom Jesus de Goiás');
   assert.equal(r.usuario, '@casa.brasilia');
 });
+
+test('Instagram com vários nomes: nome extra só genérico é ignorado', () => {
+  const perfis = [{ titulo: 'Supermercado Reis', url: 'https://www.instagram.com/supermercadoreis/' }];
+  // "SUPERMERCADO" sozinho (fantasia genérico) não pode aprovar qualquer @supermercado...
+  assert.equal(encontrarInstagram(perfis, ['mercadinho do zé', 'SUPERMERCADO'], 'Bom Jesus de Goiás').status, 'nao_encontrado');
+  // ...mas um fantasia específico aprova.
+  assert.equal(encontrarInstagram(perfis, ['mercadinho do zé', 'SUPERMERCADO REIS'], 'Bom Jesus de Goiás').status, 'ok');
+});
+
+test('nome fantasia contido no nome digitado longo', async () => {
+  const { nomeContido } = await import('../lib/texto.js');
+  const longo = 'Casa Agropecuária Polivet Medicamentos Ferramentas Vacinas Ração Pet Shop Geradores E Chocadeiras';
+  assert.equal(nomeContido('POLIVET', longo), true);
+  assert.equal(nomeContido('BATERIAS LUXFOR', 'baterias luxfor e acessórios automotivos'), true);
+  assert.equal(nomeContido('CASA', longo), false); // só genérico
+  assert.equal(nomeContido('POLIVET', 'casa agropecuaria boi gordo'), false);
+  assert.equal(nomeContido('', longo), false);
+});

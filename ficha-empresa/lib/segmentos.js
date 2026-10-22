@@ -19,6 +19,7 @@ export const SEGMENTOS_POR_CNAE = {
   '5611': 'Restaurante',
   '5620': 'Alimentação',
   // Saúde e beleza
+  '4771704': 'Agropecuária', // medicamentos veterinários
   '4771': 'Farmácias',
   '4772': 'Cosméticos e Perfumaria',
   '4774': 'Ótica',

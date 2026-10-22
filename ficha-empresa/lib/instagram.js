@@ -52,12 +52,19 @@ function avaliar(nome, cidade, r, usuario) {
   return { nota: 0, motivo: 'nome não confere com o perfil' };
 }
 
-export function encontrarInstagram(resultados, nome, cidade = '') {
+// nomes: o nome digitado ou uma lista de nomes da mesma empresa (digitado, fantasia, Google Maps).
+// Vale a melhor nota entre eles. Nomes extras só com palavras genéricas ("SUPERMERCADO") são ignorados.
+export function encontrarInstagram(resultados, nomes, cidade = '') {
+  const lista = (Array.isArray(nomes) ? nomes : [nomes])
+    .filter((n, i) => i === 0 || tokensSignificativos(n).some((t) => !ehGenerica(t)));
   const vistos = new Map();
   for (const r of resultados ?? []) {
     const usuario = usuarioDoPerfil(r.url);
     if (!usuario || vistos.has(usuario)) continue;
-    vistos.set(usuario, { ...avaliar(nome, cidade, r, usuario), titulo: r.titulo ?? '' });
+    const melhor = lista
+      .map((n) => avaliar(n, cidade, r, usuario))
+      .reduce((a, b) => (b.nota > a.nota ? b : a), { nota: 0, motivo: 'nome não confere com o perfil' });
+    vistos.set(usuario, { ...melhor, titulo: r.titulo ?? '' });
   }
   // Prefere a nota mais alta; entre iguais, mantém a ordem da busca.
   const ordenados = [...vistos].filter(([, v]) => v.nota > 0).sort((a, b) => b[1].nota - a[1].nota);

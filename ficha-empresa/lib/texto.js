@@ -90,6 +90,16 @@ export function compararNomes(nomeDigitado, textoCandidato) {
   return { score, parecido: score >= 0.6 && especificoBateu };
 }
 
+// O nome oficial curto está inteiro dentro do nome digitado (que pode ter descrições a mais):
+// "POLIVET" em "Casa Agropecuária Polivet Medicamentos Ferramentas...". Exige uma palavra específica
+// com 4+ letras, para "SUPERMERCADO" ou "JD" sozinhos não aprovarem nada.
+export function nomeContido(nomeCurto, nomeDigitado) {
+  const curtos = tokensSignificativos(nomeCurto).map(radical);
+  if (!curtos.some((t) => t.length >= 4 && !GENERICAS_RADICAIS.has(t))) return false;
+  const digitados = new Set(tokensSignificativos(nomeDigitado).map(radical));
+  return curtos.every((t) => digitados.has(t));
+}
+
 export function mesmaCidade(a, b) {
   const na = normalizar(a);
   return na.length > 0 && na === normalizar(b);
