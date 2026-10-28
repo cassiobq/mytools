@@ -8,6 +8,8 @@ Fluxo da função `api/ficha.js`, por empresa:
 2. Busca na web com o texto + `CNPJ`: candidatos de 14 dígitos validados pelo dígito verificador.
 3. [Minha Receita](https://docs.minhareceita.org/) (`GET https://minhareceita.org/{cnpj}`) para até 5 candidatos. Só é aceito um CNPJ cuja cidade bate com a digitada e cujo nome é parecido. Se mais de um conferir, fica o ativo e a ficha sai marcada como `ambiguo`.
 
+**Telefone:** o do Google Maps vem primeiro (costuma ser o número em uso); os da Receita entram como alternativa ou complemento, sem repetir números.
+
 Com o Serper, a ferramenta também consulta o **Google Maps** (endpoint `/places`, 1 crédito por empresa) para achar o estabelecimento pelo nome e cidade. Isso dá:
 - um link do Maps exato (`https://maps.google.com/?cid=...`);
 - o Instagram, quando é o site cadastrado no Google;
@@ -94,6 +96,6 @@ Com o campo vazio:
 
 ## Copiar para planilha
 
-O botão copia as linhas **sem cabeçalho**, separadas por tabulação, nesta ordem: Empresa, Segmento, Responsável (sócio), Site (Instagram), Local (Maps). Cole na primeira coluna da planilha.
+O botão copia as linhas **sem cabeçalho**, separadas por tabulação, nesta ordem: Empresa, Segmento, Responsável (sócio), Site (Instagram), Local (Maps), Telefone. Cole na primeira coluna da planilha.
 
 O **Segmento** vem do CNAE principal registrado na Receita, traduzido pela tabela em `lib/segmentos.js` (ex.: 4771-7/01 vira "Farmácias"). A chave é o começo do código CNAE e vale a mais específica. Para mudar um nome ou incluir um ramo, edite essa tabela. Se o CNAE não estiver na tabela, vai a descrição oficial da atividade.

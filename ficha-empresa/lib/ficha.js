@@ -6,6 +6,7 @@ import { extrairCnpjs, validarCnpj, formatarCnpj } from './cnpj.js';
 import { compararNomes, mesmaCidade, nomeContido } from './texto.js';
 import { encontrarInstagram, usuarioDoPerfil } from './instagram.js';
 import { escolherLocal, confirmarPorLocal, linkMapsPorCid } from './local.js';
+import { montarTelefone } from './telefone.js';
 import {
   acharSiteDaEmpresa, buscarFtidNoSite as buscarFtidNoSitePadrao, linkMapsPorEndereco, linkMapsPorFtid,
 } from './maps.js';
@@ -35,6 +36,7 @@ function fichaVazia(item) {
     socio: { status: 'nao_encontrado', nome: null, origem: null, mensagem: 'não encontrado' },
     instagram: { status: 'nao_encontrado', url: null, usuario: null, mensagem: 'não encontrado', descartados: [] },
     maps: { status: 'nao_encontrado', url: null, origem: null, mensagem: 'não encontrado' },
+    telefone: { status: 'nao_encontrado', numero: null, origem: null, outros: [], mensagem: 'não encontrado' },
     local: null, // lugar do Google Maps que confere com nome e cidade
     ambiguo: false,
     outros_candidatos: [],
@@ -166,6 +168,7 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
       ? st('nao_encontrado', 'sem CNPJ para consultar')
       : todosErro ? st('erro', consultados[0].erro) : st('nao_encontrado', 'nenhum CNPJ confere com nome e cidade');
     if (todosErro) ficha.empresa = { status: 'erro', mensagem: 'falha ao consultar a Receita' };
+    ficha.telefone = montarTelefone(local, null);
     ficha.instagram = await resolverInstagram(ficha, item, r1, buscarWeb);
     return ficha;
   }
@@ -175,6 +178,7 @@ export async function gerarFicha(item, deps = {}, aoMudarEtapa = () => {}) {
   ficha.etapas.receita = st('ok', empresa.situacao);
   ficha.empresa = { status: 'ok', mensagem: '', ...empresa, confirmacao: escolhido.confirmacao ?? null };
   ficha.socio = extrairSocio(escolhido.dados);
+  ficha.telefone = montarTelefone(local, escolhido.dados);
   ficha.ambiguo = outros.length > 0;
   ficha.outros_candidatos = outros.map((c) => resumoCandidato(c, 'também confere com nome e cidade'));
   if (!linkCid) {

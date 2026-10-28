@@ -67,6 +67,7 @@ test('aceitação (mock): baterias luxfor rio verde', async () => {
   assert.equal(f.empresa.nome_exibido, 'BATERIAS LUXFOR');
   assert.equal(f.socio.nome, 'CLEIRY ELIANE SOARES PIRES SANTILLE');
   assert.equal(f.socio.origem, 'qsa');
+  assert.equal(f.telefone.numero, '(64) 3612-1022'); // da Receita (sem Google Maps no mock)
   assert.equal(f.instagram.url, 'https://www.instagram.com/bateriasluxfor.ltda/');
   assert.equal(f.maps.origem, 'endereço');
   assert.equal(

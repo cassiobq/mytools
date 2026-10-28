@@ -243,3 +243,22 @@ test('Instagram: dono de posts e reels (link, título e "usuario on data")', asy
   ], ['A Construmil', 'A CONSTRUMIL'], 'Bom Jesus de Goiás');
   assert.equal(r.url, 'https://www.instagram.com/lojasconstrumil/');
 });
+
+test('telefone: Google Maps primeiro, Receita como complemento, sem repetir', async () => {
+  const { formatarTelefone, montarTelefone } = await import('../lib/telefone.js');
+  assert.equal(formatarTelefone('6436121022'), '(64) 3612-1022');
+  assert.equal(formatarTelefone('64992897195'), '(64) 99289-7195');
+  assert.equal(formatarTelefone('6492897195'), '(64) 99289-7195'); // celular antigo sem o 9
+  assert.equal(formatarTelefone('+55 64 3608-2101'), '(64) 3608-2101');
+
+  // Caso real Gêmeos: Google (64) 3608-3169 = Receita tel 1; Receita tel 2 é outro.
+  const t = montarTelefone({ telefone: '(64) 3608-3169' }, { ddd_telefone_1: '6436083169', ddd_telefone_2: '6492897195' });
+  assert.equal(t.numero, '(64) 3608-3169');
+  assert.equal(t.origem, 'Google Maps');
+  assert.deepEqual(t.outros, [{ numero: '(64) 99289-7195', origem: 'Receita' }]);
+
+  // Sem Google: Receita.
+  assert.equal(montarTelefone(null, { ddd_telefone_1: '6436121022', ddd_telefone_2: '' }).origem, 'Receita');
+  // Nada: não encontrado.
+  assert.equal(montarTelefone(null, null).status, 'nao_encontrado');
+});

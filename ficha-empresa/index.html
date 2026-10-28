@@ -63,6 +63,7 @@
   th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
   tr.baixada td { background: var(--linha-baixada); }
   tr.ambigua td { background: var(--linha-ambigua); }
+  a.tel { white-space: nowrap; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
   .nome { font-weight: 600; overflow-wrap: anywhere; }
   .entrada { display: block; font-size: .8rem; color: var(--suave); font-weight: 400; }
@@ -93,7 +94,7 @@
 <body>
 <main>
   <h1>Ficha de Empresa</h1>
-  <p class="sub">Nome fantasia, segmento, sócio, Instagram e Google Maps a partir do nome da empresa e da cidade.</p>
+  <p class="sub">Nome fantasia, segmento, sócio, telefone, Instagram e Google Maps a partir do nome da empresa e da cidade.</p>
 
   <section class="card" aria-labelledby="titulo-busca">
     <h2 id="titulo-busca">Empresas</h2>
@@ -130,7 +131,7 @@
     <div class="tabela-wrap">
       <table>
         <thead>
-          <tr><th scope="col">Nome fantasia</th><th scope="col">Sócio</th><th scope="col">Instagram</th><th scope="col">Maps</th><th scope="col">CNPJ</th></tr>
+          <tr><th scope="col">Nome fantasia</th><th scope="col">Sócio</th><th scope="col">Telefone</th><th scope="col">Instagram</th><th scope="col">Maps</th><th scope="col">CNPJ</th></tr>
         </thead>
         <tbody id="resultado"></tbody>
       </table>
@@ -216,6 +217,13 @@
       `<li>${esc(p.usuario)}${p.titulo ? ' — ' + esc(p.titulo) : ''}: ${esc(p.motivo)}</li>`).join('')}</ul></details>`;
   }
 
+  function celulaTelefone(t) {
+    if (t?.status !== 'ok') return `<span class="vazio">${esc(t?.mensagem || 'não encontrado')}</span>`;
+    const link = (n) => `<a href="tel:+55${esc(String(n).replace(/\D/g, ''))}" class="tel">${esc(n)}</a>`;
+    const outros = (t.outros || []).map((o) => `<br>${link(o.numero)} <span class="entrada" style="display:inline">${esc(o.origem)}</span>`).join('');
+    return `${link(t.numero)} <span class="entrada" style="display:inline">${esc(t.origem)}</span>${outros}`;
+  }
+
   function linhaResultado(f) {
     const e = f.empresa || {};
     const ok = e.status === 'ok';
@@ -235,6 +243,7 @@
       <td data-rotulo="Nome"><div class="cel"><span class="nome">${nome}</span>${selos ? '<br>' + selos : ''}${ok && e.segmento ? `<span class="entrada" title="${esc(e.atividade)}">Segmento: ${esc(e.segmento)}</span>` : ''}<span class="entrada">${esc(f.entrada)}</span>
         ${listaCandidatos('Outros CNPJs que conferem', f.outros_candidatos)}${listaCandidatos('Candidatos descartados', f.candidatos_descartados)}${listaPerfis(f.instagram?.descartados)}</div></td>
       <td data-rotulo="Sócio"><div class="cel">${socio}</div></td>
+      <td data-rotulo="Telefone"><div class="cel">${celulaTelefone(f.telefone)}</div></td>
       <td data-rotulo="Instagram"><div class="cel">${celulaLink(f.instagram, f.instagram?.usuario)}</div></td>
       <td data-rotulo="Maps"><div class="cel">${celulaLink(f.maps, 'Abrir no Maps')}</div></td>
       <td data-rotulo="CNPJ" class="mono"><div class="cel">${ok ? esc(e.cnpj_formatado) : '<span class="vazio">—</span>'}</div></td>
@@ -319,7 +328,7 @@
   const celulaTsv = (s) => String(s ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 
   $('copiar').addEventListener('click', async () => {
-    // Sem cabeçalho, na ordem da planilha: Empresa, Segmento, Responsável, Site (Instagram), Local (Maps).
+    // Sem cabeçalho, na ordem da planilha: Empresa, Segmento, Responsável, Site (Instagram), Local (Maps), Telefone.
     const linhas = [];
     for (const f of fichas.filter(Boolean)) {
       linhas.push([
@@ -328,6 +337,7 @@
         f.socio?.status === 'ok' ? f.socio.nome : 'não encontrado',
         f.instagram?.status === 'ok' ? f.instagram.url : 'não encontrado',
         f.maps?.status === 'ok' ? f.maps.url : 'não encontrado',
+        f.telefone?.status === 'ok' ? f.telefone.numero : 'não encontrado',
       ].map(celulaTsv));
     }
     const tsv = linhas.map((l) => l.join('\t')).join('\n');
