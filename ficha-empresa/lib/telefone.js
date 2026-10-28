@@ -12,7 +12,9 @@ export function formatarTelefone(tel) {
   return String(tel ?? '').trim();
 }
 
-// Lista sem repetidos (compara os últimos 8 dígitos), na ordem: Google Maps, Receita 1, Receita 2.
+// Lista sem repetidos, na ordem: Google Maps, Receita 1, Receita 2. Números com menos de 10 dígitos
+// (DDD + 8) são de antes da mudança para 8 dígitos e não completam ligação: ficam de fora. Repetidos
+// são comparados pelos últimos 7 dígitos (o antigo "608-2101" é o atual "3608-2101").
 export function montarTelefone(local, dados) {
   const fontes = [
     [local?.telefone, 'Google Maps'],
@@ -23,8 +25,8 @@ export function montarTelefone(local, dados) {
   const numeros = [];
   for (const [tel, origem] of fontes) {
     const d = String(tel ?? '').replace(/\D/g, '');
-    if (d.length < 8 || vistos.has(d.slice(-8))) continue;
-    vistos.add(d.slice(-8));
+    if (d.length < 10 || vistos.has(d.slice(-7))) continue;
+    vistos.add(d.slice(-7));
     numeros.push({ numero: formatarTelefone(tel), origem });
   }
   if (!numeros.length) return { status: 'nao_encontrado', numero: null, origem: null, outros: [], mensagem: 'não encontrado' };

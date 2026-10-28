@@ -257,6 +257,10 @@ test('telefone: Google Maps primeiro, Receita como complemento, sem repetir', as
   assert.equal(t.origem, 'Google Maps');
   assert.deepEqual(t.outros, [{ numero: '(64) 99289-7195', origem: 'Receita' }]);
 
+  // Caso real A Construmil: Receita tem o número antigo de 7 dígitos ("646082101"), que é o atual do Google.
+  const c = montarTelefone({ telefone: '(64) 3608-2101' }, { ddd_telefone_1: '646082101' });
+  assert.deepEqual([c.numero, c.outros], ['(64) 3608-2101', []]);
+  assert.equal(montarTelefone(null, { ddd_telefone_1: '646082101' }).status, 'nao_encontrado');
   // Sem Google: Receita.
   assert.equal(montarTelefone(null, { ddd_telefone_1: '6436121022', ddd_telefone_2: '' }).origem, 'Receita');
   // Nada: não encontrado.
