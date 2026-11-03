@@ -315,3 +315,10 @@ test('confereNome: caso real Caçu, "Auto + Lava Jato" não é a "LAVA JATO GOIA
   assert.equal(confereNome('Auto + Lava Jato', 'LAVA JATO GOIAS E REPRESENTACOES', 'LAVA JATO GOIAS E REPRESENTACOES MARCIEL JOSE DA SILVA LTDA', 'Caçu'), false);
   assert.equal(confereNome('Lava Jato Ferrari', 'LAVA JATO FERRARI', 'LAVA JATO FERRARI', 'Bom Jesus de Goiás'), true);
 });
+
+test('confereNome: nome genérico sem a cidade (tirada pelo campo Cidade), caso real Marmoraria Caçu', async () => {
+  const { confereNome } = await import('../lib/texto.js');
+  assert.equal(confereNome('Marmoraria', 'MARMORARIA CACU', 'MARMORARIA CACU MARMORARIA CACU LTDA', 'Caçu'), true);
+  assert.equal(confereNome('Marmoraria', 'MARMORARIA 2 IRMAOS', 'MARMORARIA 2 IRMAOS LTDA', 'Caçu'), false);
+  assert.equal(confereNome('Drogaria', 'DROGARIA GOIAS', 'DROGARIA GOIAS LTDA', 'Bom Jesus de Goiás'), false);
+});

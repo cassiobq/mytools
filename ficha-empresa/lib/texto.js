@@ -104,6 +104,23 @@ function ehGenericaNaCidade(cidade) {
   return (t) => GENERICAS_RADICAIS.has(t) || daCidade.has(t);
 }
 
+// Tira o nome da cidade como expressão inteira ("bom jesus goias" ou só "bom jesus"), nunca palavra solta:
+// em "Drogaria Goiás Bom Jesus" sai "bom jesus" e fica "drogaria goias".
+function tirarCidade(tokens, cidade) {
+  const c = tokensSignificativos(cidade).map(radical);
+  const frases = [c, c.length >= 2 ? c.slice(0, -1) : null].filter((f) => f && f.length);
+  let xs = [...tokens];
+  for (const f of frases) {
+    for (let i = 0; i + f.length <= xs.length; i++) {
+      if (f.every((t, k) => xs[i + k] === t)) {
+        xs = [...xs.slice(0, i), ...xs.slice(i + f.length)];
+        i--;
+      }
+    }
+  }
+  return xs;
+}
+
 function parecidas(a, b) {
   if (a === b) return true;
   if (a.length >= 8 && b.length >= 8) return levenshtein(a, b) <= 2;
@@ -122,10 +139,13 @@ export function confereNome(digitado, nomePrincipal, textoCompleto, cidade = '')
   const tokens = tokensSignificativos(digitado).map(radical);
   if (!tokens.length) return false;
   if (!tokens.some((t) => !generica(t))) {
-    // Mesmas palavras dos dois lados, tolerando erro de digitação ("MATERIAS PARA COSNTRUCAO").
-    const outros = tokensSignificativos(nomePrincipal || textoCompleto).map(radical);
+    // Mesmas palavras dos dois lados, tolerando erro de digitação ("MATERIAS PARA COSNTRUCAO"). O nome da
+    // cidade não conta de nenhum lado: "Marmoraria" (cidade tirada pelo campo Cidade) = "MARMORARIA CACU".
+    const semCidade = (xs) => tirarCidade(xs, cidade);
+    const meus = semCidade(tokens);
+    const outros = semCidade(tokensSignificativos(nomePrincipal || textoCompleto).map(radical));
     const cobre = (xs, ys) => xs.every((x) => ys.some((y) => parecidas(x, y)));
-    return outros.length > 0 && cobre(tokens, outros) && cobre(outros, tokens);
+    return meus.length > 0 && outros.length > 0 && cobre(meus, outros) && cobre(outros, meus);
   }
   if (!compararNomes(digitado, textoCompleto, cidade).parecido) return false;
   if (nomePrincipal) {
