@@ -288,3 +288,17 @@ test('confereNome: casos reais de Bom Jesus de Goiás (cidade no nome, conflito,
   assert.equal(confereNome('farmacia du povo popular', 'Farmácia DuPovo Popular', 'Farmácia DuPovo Popular', BJ), true);
   assert.equal(confereNome('Rede Construcao Gemeos', 'Rede Construcao - Gemeos', 'Rede Construcao - Gemeos', BJ), true);
 });
+
+test('Instagram com nome genérico (ramo + cidade): só o próprio nome serve', () => {
+  const BJ = 'Bom Jesus de Goiás';
+  const perfil = (u) => [{ titulo: u, url: `https://www.instagram.com/${u}/` }];
+  // Casos reais: @drogariasaojoaobomjesus é de outra farmácia.
+  assert.equal(encontrarInstagram(perfil('drogariasaojoaobomjesus'), ['Drogaria Bom Jesus'], BJ).status, 'nao_encontrado');
+  assert.equal(encontrarInstagram(perfil('drogariasaojoaobomjesus'), ['Drogaria Goiás Bom Jesus'], BJ).status, 'nao_encontrado');
+  assert.equal(encontrarInstagram(perfil('auto_pecas_bomjesus'), ['Auto peças'], BJ).status, 'nao_encontrado');
+  // O próprio nome continua valendo.
+  assert.equal(encontrarInstagram(perfil('auto_pecas_bomjesus'), ['Auto Peças Bom Jesus'], BJ).status, 'ok');
+  assert.equal(encontrarInstagram(perfil('drogaria_bomjesus_go'), ['Drogaria Bom Jesus'], BJ).status, 'ok');
+  // E o @ certo da São João, pelo nome dela.
+  assert.equal(encontrarInstagram(perfil('drogariasaojoaobomjesus'), ['Drogaria São João'], BJ).status, 'ok');
+});

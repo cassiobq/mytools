@@ -91,6 +91,12 @@ export function compararNomes(nomeDigitado, textoCandidato, cidade = '') {
   return { score, parecido: score >= 0.6 && especificoBateu };
 }
 
+// Nome sem nenhuma palavra que identifique a empresa: só ramo + cidade ("Drogaria Bom Jesus", "Auto peças").
+export function nomeSoGenerico(nome, cidade = '') {
+  const generica = ehGenericaNaCidade(cidade);
+  return !tokensSignificativos(nome).map(radical).some((t) => !generica(t));
+}
+
 function ehGenericaNaCidade(cidade) {
   const daCidade = new Set(tokensSignificativos(cidade).map(radical));
   return (t) => GENERICAS_RADICAIS.has(t) || daCidade.has(t);

@@ -1,5 +1,5 @@
 // Escolhe o perfil de Instagram entre os resultados de busca. Nunca chuta: sem certeza, null.
-import { compactar, tokensSignificativos, normalizar, ehGenerica } from './texto.js';
+import { compactar, tokensSignificativos, normalizar, ehGenerica, nomeSoGenerico } from './texto.js';
 
 const RESERVADOS = new Set([
   'p', 'reel', 'reels', 'tv', 'explore', 'stories', 'accounts', 'about', 'directory', 'developer',
@@ -32,6 +32,14 @@ export function usuarioDoPerfil(url) {
 function avaliar(nome, cidade, r, usuario) {
   const tokens = tokensSignificativos(nome);
   if (!tokens.length) return { nota: 0, motivo: 'nome vazio' };
+  // Nome só com ramo + cidade ("Drogaria Bom Jesus"): o @ tem de ser praticamente o próprio nome
+  // (@drogariabomjesus, @drogaria_bomjesus_go), nunca outro com o nome dentro (@drogariasaojoaobomjesus).
+  if (nomeSoGenerico(nome, cidade)) {
+    const nomeJunto = tokens.join('');
+    const sobra = compactar(usuario).replace(/\d+/g, '').replace(nomeJunto, '');
+    const ok = compactar(usuario).includes(nomeJunto) && sobra.length <= 3;
+    return ok ? { nota: 3, motivo: '' } : { nota: 0, motivo: 'nome genérico: o @ precisa ser o próprio nome' };
+  }
   const especificos = tokens.filter((t) => !ehGenerica(t));
   const userCompacto = compactar(usuario);
   const tituloTokens = new Set(normalizar(r.titulo).split(' '));
