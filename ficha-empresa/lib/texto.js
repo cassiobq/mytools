@@ -74,7 +74,8 @@ const GENERICAS_RADICAIS = new Set([...GENERICAS].map(radical));
 // Mede o quanto o nome digitado aparece no texto candidato (0..1) e diz se é "parecido".
 // Parecido = pelo menos 60% dos tokens batem E algum token não genérico bate
 // (evita aceitar "Auto Peças Silva" como "Auto Peças Souza").
-export function compararNomes(nomeDigitado, textoCandidato) {
+// cidade (opcional): as palavras dela ("bom", "jesus") contam como genéricas, não identificam a empresa.
+export function compararNomes(nomeDigitado, textoCandidato, cidade = '') {
   const tokens = tokensSignificativos(nomeDigitado).map(radical);
   if (!tokens.length) return { score: 0, parecido: false };
   const candTokens = new Set(tokensSignificativos(textoCandidato).map(radical));
@@ -84,18 +85,58 @@ export function compararNomes(nomeDigitado, textoCandidato) {
 
   const bateram = tokens.filter((t) => tokenBate(t, candTokens, candCompacto));
   const score = bateram.length / tokens.length;
-  const generica = (t) => GENERICAS_RADICAIS.has(t);
+  const generica = ehGenericaNaCidade(cidade);
   const especificos = tokens.filter((t) => !generica(t));
   const especificoBateu = especificos.length === 0 || bateram.some((t) => !generica(t));
   return { score, parecido: score >= 0.6 && especificoBateu };
 }
 
+function ehGenericaNaCidade(cidade) {
+  const daCidade = new Set(tokensSignificativos(cidade).map(radical));
+  return (t) => GENERICAS_RADICAIS.has(t) || daCidade.has(t);
+}
+
+function parecidas(a, b) {
+  if (a === b) return true;
+  if (a.length >= 8 && b.length >= 8) return levenshtein(a, b) <= 2;
+  return a.length >= 5 && b.length >= 5 && levenshtein(a, b) <= 1;
+}
+
+// O nome confere com o candidato (empresa da Receita ou lugar do Google)? Além da semelhança, três travas:
+//  1) palavras da cidade contam como genéricas ("Drogaria Goiás Bom Jesus" não casa com
+//     "DROGARIA ARCO-IRIS BOM JESUS LTDA" só por "drogaria bom jesus");
+//  2) sem conflito: as palavras próprias do nome principal do candidato têm de estar no digitado
+//     ("Farmácia Santa Rosa" não casa com "FARMACIA SANTA RITA");
+//  3) nome digitado só com palavras genéricas/da cidade ("Drogaria Bom Jesus"): exige o mesmo nome.
+// nomePrincipal: nome fantasia ou título no Google; vazio pula a trava 2. textoCompleto: fantasia + razão social.
+export function confereNome(digitado, nomePrincipal, textoCompleto, cidade = '') {
+  const generica = ehGenericaNaCidade(cidade);
+  const tokens = tokensSignificativos(digitado).map(radical);
+  if (!tokens.length) return false;
+  if (!tokens.some((t) => !generica(t))) {
+    // Mesmas palavras dos dois lados, tolerando erro de digitação ("MATERIAS PARA COSNTRUCAO").
+    const outros = tokensSignificativos(nomePrincipal || textoCompleto).map(radical);
+    const cobre = (xs, ys) => xs.every((x) => ys.some((y) => parecidas(x, y)));
+    return outros.length > 0 && cobre(tokens, outros) && cobre(outros, tokens);
+  }
+  if (!compararNomes(digitado, textoCompleto, cidade).parecido) return false;
+  if (nomePrincipal) {
+    const digitadoJunto = tokens.join('');
+    const proprios = tokensSignificativos(nomePrincipal).map(radical).filter((t) => !generica(t) && t.length >= 2);
+    const conflito = proprios.some((p) =>
+      !tokens.some((t) => parecidas(p, t)) && !(p.length >= 4 && digitadoJunto.includes(p)));
+    if (conflito) return false;
+  }
+  return true;
+}
+
 // O nome oficial curto está inteiro dentro do nome digitado (que pode ter descrições a mais):
 // "POLIVET" em "Casa Agropecuária Polivet Medicamentos Ferramentas...". Exige uma palavra específica
 // com 4+ letras, para "SUPERMERCADO" ou "JD" sozinhos não aprovarem nada.
-export function nomeContido(nomeCurto, nomeDigitado) {
+export function nomeContido(nomeCurto, nomeDigitado, cidade = '') {
+  const generica = ehGenericaNaCidade(cidade);
   const curtos = tokensSignificativos(nomeCurto).map(radical);
-  if (!curtos.some((t) => t.length >= 4 && !GENERICAS_RADICAIS.has(t))) return false;
+  if (!curtos.some((t) => t.length >= 4 && !generica(t))) return false;
   const digitados = new Set(tokensSignificativos(nomeDigitado).map(radical));
   return curtos.every((t) => digitados.has(t));
 }

@@ -266,3 +266,25 @@ test('telefone: Google Maps primeiro, Receita como complemento, sem repetir', as
   // Nada: não encontrado.
   assert.equal(montarTelefone(null, null).status, 'nao_encontrado');
 });
+
+test('confereNome: casos reais de Bom Jesus de Goiás (cidade no nome, conflito, nomes genéricos)', async () => {
+  const { confereNome } = await import('../lib/texto.js');
+  const BJ = 'Bom Jesus de Goiás';
+  const ok = (dig, fantasia, razao = '') => confereNome(dig, fantasia, `${fantasia} ${razao}`, BJ);
+  // Conflito: Rosa ≠ Rita.
+  assert.equal(ok('Farmácia Santa Rosa', 'FARMACIA SANTA RITA', 'DROGACAMPOS COMERCIO DE DROGAS LTDA'), false);
+  // Cidade no nome não identifica: não casa com a Arco-Íris.
+  assert.equal(ok('Drogaria Goiás Bom Jesus', 'DROGARIAS ARCO-IRIS', 'DROGARIA ARCO-IRIS BOM JESUS LTDA'), false);
+  // Nome só genérico + cidade: exige o mesmo nome.
+  assert.equal(ok('Drogaria Bom Jesus', 'DROGARIA BOM JESUS', 'FARMACIA BOM JESUS LTDA'), true);
+  assert.equal(confereNome('Drogaria Bom Jesus', 'Drogaria Goiás Bom Jesus', 'Drogaria Goiás Bom Jesus', BJ), false);
+  // Continuam aceitos.
+  assert.equal(ok('Drogaria Arco Íris', 'DROGARIAS ARCO-IRIS', 'DROGARIA ARCO-IRIS BOM JESUS LTDA'), true);
+  assert.equal(ok('Bom Jesus Materiais de Construção', 'BOM JESUS MATERIAS PARA COSNTRUCAO'), true);
+  assert.equal(ok('Jd Materiais De Construção E Madeireira', 'JD MATERIAIS PARA CONSTRUCOES', 'JD MATERIAIS PARA CONSTRUCOES LTDA'), true);
+  assert.equal(ok('Casa Brasília Materiais Para Construção', 'CASA BRASILIA', 'CASA BRASILIA MATERIAIS DE CONSTRUCAO LTDA'), true);
+  assert.equal(ok('FARMÁCIA DU POVO POPULAR', 'FARMARCIA DU POVO POPULAR'), true);
+  assert.equal(ok('Gaúcho Climatizadores PÓLO CLIMA', 'GAUCHO CLIMATIZADORES', 'GAUCHO CLIMATIZACAO E COMERCIO DE MOVEIS LTDA'), true);
+  assert.equal(confereNome('farmacia du povo popular', 'Farmácia DuPovo Popular', 'Farmácia DuPovo Popular', BJ), true);
+  assert.equal(confereNome('Rede Construcao Gemeos', 'Rede Construcao - Gemeos', 'Rede Construcao - Gemeos', BJ), true);
+});

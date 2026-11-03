@@ -3,7 +3,7 @@
 import { buscarWeb as buscarWebPadrao, buscarLocal as buscarLocalPadrao, textoDoResultado } from './busca.js';
 import { consultarReceita as consultarReceitaPadrao, estaAtiva, resumirEmpresa, extrairSocio } from './receita.js';
 import { extrairCnpjs, validarCnpj, formatarCnpj } from './cnpj.js';
-import { compararNomes, mesmaCidade, nomeContido } from './texto.js';
+import { compararNomes, confereNome, mesmaCidade, nomeContido } from './texto.js';
 import { encontrarInstagram, usuarioDoPerfil } from './instagram.js';
 import { escolherLocal, confirmarPorLocal, linkMapsPorCid } from './local.js';
 import { montarTelefone } from './telefone.js';
@@ -52,9 +52,10 @@ export function avaliarCandidato(dados, item) {
   if (item.uf && dados.uf && item.uf.toUpperCase() !== String(dados.uf).toUpperCase()) {
     return { aceito: false, motivo: `outra UF (${dados.uf})`, score: 0 };
   }
-  const { score, parecido } = compararNomes(item.nome, `${dados.nome_fantasia ?? ''} ${dados.razao_social ?? ''}`);
-  if (!parecido) {
-    if (nomeContido(dados.nome_fantasia, item.nome)) return { aceito: true, motivo: '', score: 0.6 };
+  const textoCandidato = `${dados.nome_fantasia ?? ''} ${dados.razao_social ?? ''}`;
+  const { score } = compararNomes(item.nome, textoCandidato, item.cidade);
+  if (!confereNome(item.nome, String(dados.nome_fantasia ?? '').trim(), textoCandidato, item.cidade)) {
+    if (nomeContido(dados.nome_fantasia, item.nome, item.cidade)) return { aceito: true, motivo: '', score: 0.6 };
     return { aceito: false, motivo: 'nome diferente do digitado', score };
   }
   return { aceito: true, motivo: '', score };
