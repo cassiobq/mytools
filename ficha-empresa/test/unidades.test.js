@@ -302,3 +302,10 @@ test('Instagram com nome genérico (ramo + cidade): só o próprio nome serve', 
   // E o @ certo da São João, pelo nome dela.
   assert.equal(encontrarInstagram(perfil('drogariasaojoaobomjesus'), ['Drogaria São João'], BJ).status, 'ok');
 });
+
+test('Instagram: título de um post não aprova o dono do post (caso real Alfa Monitoramento)', () => {
+  const r = encontrarInstagram([{
+    url: 'https://www.instagram.com/aloandersonoficial/reel/X1/', titulo: 'Alfa Monitoramento - instalação de câmeras', descricao: '',
+  }], ['Alfa Monitoramento'], 'Bom Jesus de Goiás');
+  assert.equal(r.status, 'nao_encontrado');
+});

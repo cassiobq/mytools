@@ -29,7 +29,8 @@ export function usuarioDoPerfil(url) {
 //     nome no @ (ex.: @casa.brasilia para "Casa Brasília Materiais Para Construção");
 //  1: o título do perfil traz o nome inteiro (com ou sem espaços entre as palavras).
 // Abaixo disso, o perfil é descartado (nunca chuta um @).
-function avaliar(nome, cidade, r, usuario) {
+// deUmPost: o @ veio do dono de um post/reel; aí o título fala do conteúdo, não do perfil, e não conta.
+function avaliar(nome, cidade, r, usuario, deUmPost = false) {
   const tokens = tokensSignificativos(nome);
   if (!tokens.length) return { nota: 0, motivo: 'nome vazio' };
   // Nome só com ramo + cidade ("Drogaria Bom Jesus"): o @ tem de ser praticamente o próprio nome
@@ -54,7 +55,7 @@ function avaliar(nome, cidade, r, usuario) {
     return { nota: 2, motivo: '' };
   }
   // Título com o nome inteiro, palavra a palavra ou junto ("Farmácia DuPovo Popular").
-  if (tokens.every((t) => tituloTokens.has(t)) || compactar(r.titulo).includes(tokens.join(''))) {
+  if (!deUmPost && (tokens.every((t) => tituloTokens.has(t)) || compactar(r.titulo).includes(tokens.join('')))) {
     return { nota: 1, motivo: '' };
   }
   return { nota: 0, motivo: 'nome não confere com o perfil' };
@@ -91,13 +92,13 @@ export function encontrarInstagram(resultados, nomes, cidade = '') {
   const vistos = new Map();
   // Páginas de perfil primeiro; depois os donos de posts/reels (em empate, o perfil direto vence).
   const candidatos = [
-    ...(resultados ?? []).map((r) => [usuarioDoPerfil(r.url), r]),
-    ...(resultados ?? []).filter((r) => !usuarioDoPerfil(r.url)).map((r) => [donoDoResultado(r), r]),
+    ...(resultados ?? []).map((r) => [usuarioDoPerfil(r.url), r, false]),
+    ...(resultados ?? []).filter((r) => !usuarioDoPerfil(r.url)).map((r) => [donoDoResultado(r), r, true]),
   ];
-  for (const [usuario, r] of candidatos) {
+  for (const [usuario, r, deUmPost] of candidatos) {
     if (!usuario || vistos.has(usuario)) continue;
     const melhor = lista
-      .map((n) => avaliar(n, cidade, r, usuario))
+      .map((n) => avaliar(n, cidade, r, usuario, deUmPost))
       .reduce((a, b) => (b.nota > a.nota ? b : a), { nota: 0, motivo: 'nome não confere com o perfil' });
     vistos.set(usuario, { ...melhor, titulo: r.titulo ?? '' });
   }
