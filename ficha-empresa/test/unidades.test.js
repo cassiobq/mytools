@@ -309,3 +309,9 @@ test('Instagram: título de um post não aprova o dono do post (caso real Alfa M
   }], ['Alfa Monitoramento'], 'Bom Jesus de Goiás');
   assert.equal(r.status, 'nao_encontrado');
 });
+
+test('confereNome: caso real Caçu, "Auto + Lava Jato" não é a "LAVA JATO GOIAS"', async () => {
+  const { confereNome } = await import('../lib/texto.js');
+  assert.equal(confereNome('Auto + Lava Jato', 'LAVA JATO GOIAS E REPRESENTACOES', 'LAVA JATO GOIAS E REPRESENTACOES MARCIEL JOSE DA SILVA LTDA', 'Caçu'), false);
+  assert.equal(confereNome('Lava Jato Ferrari', 'LAVA JATO FERRARI', 'LAVA JATO FERRARI', 'Bom Jesus de Goiás'), true);
+});

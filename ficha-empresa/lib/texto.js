@@ -29,6 +29,8 @@ const GENERICAS = new Set([
   'confeccoes', 'modas', 'moda', 'calcados', 'clinica', 'odontologia', 'academia', 'escola',
   'colegio', 'hotel', 'posto', 'combustiveis', 'pneus', 'acougue', 'casa', 'center', 'centro',
   'grupo', 'empresa', 'brasil', 'goias', 'representacoes', 'atacado', 'atacadista', 'varejo',
+  'lava', 'jato', 'lavajato', 'borracharia', 'marmoraria', 'vidracaria', 'serralheria', 'refrigeracao',
+  'climatizacao', 'pet', 'shop', 'motos', 'moto',
 ]);
 
 export function ehGenerica(token) {
