@@ -31,7 +31,7 @@ const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d
   await dlg.getByLabel('Data início').fill('2020-01-01');
   await dlg.getByLabel('Data fim').fill(hoje());
   await dlg.locator('#participantes').fill('Equipe de Teste');
-  await page.screenshot({ path: FOTOS ? `${FOTOS}/6-relatorio.png` : '/dev/null' });
+  if (FOTOS) await page.screenshot({ path: `${FOTOS}/6-relatorio.png` });
   ok('diálogo com período De → Até e participantes');
 
   // Período sem nada: mensagem clara.
