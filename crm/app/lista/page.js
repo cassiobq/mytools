@@ -6,13 +6,14 @@ import { useAviso, textoDoStatus } from '../ui.js';
 import { CardLead, Dialogo } from '../componentes.js';
 import FormLead, { formularioDoLead, rotuloDe, RESULTADOS } from '../FormLead.js';
 import { opsEditar, opsArquivar } from '../../lib/acoes.js';
-import { paraCSV, COLUNAS_LEADS, COLUNAS_CONTATOS } from '../../lib/csv.js';
+import { gerarXLSX } from '../../lib/xlsx.js';
 import { hojeISO } from '../../lib/datas.js';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-function baixar(nome, conteudo) {
-  const url = URL.createObjectURL(new Blob([conteudo], { type: 'text/csv;charset=utf-8' }));
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+function baixar(nome, conteudo, tipo = XLSX_MIME) {
+  const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
   const a = Object.assign(document.createElement('a'), { href: url, download: nome });
   document.body.appendChild(a);
   a.click();
@@ -58,8 +59,7 @@ export default function Lista() {
         </label>
       </div>
       <div className="acoes" style={{ marginBottom: 14 }}>
-        <button type="button" className="btn sec" onClick={() => baixar(`crm-empresas-${hojeISO()}.csv`, paraCSV(leads, COLUNAS_LEADS))}>Exportar CSV</button>
-        <button type="button" className="btn sec" onClick={() => baixar(`crm-contatos-${hojeISO()}.csv`, paraCSV(contatos, COLUNAS_CONTATOS))}>CSV do histórico</button>
+        <button type="button" className="btn sec" onClick={async () => baixar(`crm-${hojeISO()}.xlsx`, await gerarXLSX(leads, contatos))}>Exportar XLSX</button>
       </div>
       <p className="meta">{filtrados.length} de {leads.length} empresa{leads.length === 1 ? '' : 's'}</p>
       {!filtrados.length && <p className="vazio">Nenhuma empresa encontrada.</p>}

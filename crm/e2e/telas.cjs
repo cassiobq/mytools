@@ -131,15 +131,20 @@ const foto = async (page, nome) => { if (FOTOS) await page.screenshot({ path: `$
   ok('Lista: edição gravada no banco, sem perder os outros campos');
 
   await page.getByLabel('Buscar').fill('');
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Exportar CSV' }).click()]);
-  const caminho = await download.path();
-  const csv = fs.readFileSync(caminho, 'utf8');
-  assert.ok(csv.startsWith('﻿id,criado_em,'));
-  const linhas = csv.trim().split('\r\n').length - 1;
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Exportar XLSX' }).click()]);
+  assert.match(download.suggestedFilename(), /^crm-\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const ExcelJS = require(require.resolve('exceljs', { paths: [__dirname + '/..'] }));
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(await download.path());
+  const emp = wb.getWorksheet('Empresas');
   const total = (await rest(s, 'leads?select=id')).corpo.length;
-  assert.equal(linhas, total);
-  assert.ok(csv.includes(nomeEditado));
-  ok(`Exportar CSV: ${linhas} linhas = ${total} empresas no banco (arquivadas incluídas), com BOM para o Sheets`);
+  assert.equal(emp.rowCount - 1, total);
+  const linhaEditada = emp.getRows(2, emp.rowCount - 1).find((r) => r.getCell(1).value === nomeEditado);
+  assert.equal(linhaEditada.getCell(9).value, 'Cotação'); // valores em português
+  assert.ok(linhaEditada.getCell(17).value instanceof Date); // datas como datas
+  const abaHist = wb.getWorksheet('Histórico');
+  assert.equal(abaHist.rowCount - 1, (await rest(s, 'contatos?select=id')).corpo.length);
+  ok(`Exportar XLSX: aba Empresas com ${total} linhas e aba Histórico batem com o banco; valores em português e datas como data`);
 
   assert.deepEqual(erros, []);
   ok('nenhum erro de JavaScript');

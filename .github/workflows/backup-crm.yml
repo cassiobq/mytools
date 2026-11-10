@@ -1,0 +1,52 @@
+# Backup diário do banco do micro CRM (Supabase), criptografado.
+# O repositório é público: o arquivo é cifrado com AES-256 antes de virar artifact; sem a senha não serve para nada.
+# Segredos necessários (Settings > Secrets and variables > Actions):
+#   CRM_DB_URL      string de conexão "Session pooler" do Supabase (Connect > Session pooler), com a senha do banco
+#   CRM_BACKUP_SENHA senha para cifrar/decifrar o backup (guarde-a fora do GitHub)
+name: Backup do micro CRM
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # 03:17 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir segredos
+        env:
+          CRM_DB_URL: ${{ secrets.CRM_DB_URL }}
+          CRM_BACKUP_SENHA: ${{ secrets.CRM_BACKUP_SENHA }}
+        run: |
+          if [ -z "$CRM_DB_URL" ] || [ -z "$CRM_BACKUP_SENHA" ]; then
+            echo "::error::Configure os segredos CRM_DB_URL e CRM_BACKUP_SENHA (veja crm/README.md)."
+            exit 1
+          fi
+
+      - name: Instalar pg_dump 17
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump do schema public (estrutura + dados), cifrado
+        env:
+          CRM_DB_URL: ${{ secrets.CRM_DB_URL }}
+          CRM_BACKUP_SENHA: ${{ secrets.CRM_BACKUP_SENHA }}
+        run: |
+          ARQ="crm-backup-$(date -u +%Y-%m-%d).sql.gz"
+          /usr/lib/postgresql/17/bin/pg_dump "$CRM_DB_URL" --schema=public --no-owner --no-privileges | gzip > "$ARQ"
+          echo "Tamanho: $(stat -c %s "$ARQ") bytes"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$CRM_BACKUP_SENHA" --symmetric --cipher-algo AES256 -o "$ARQ.gpg" "$ARQ"
+          rm "$ARQ"
+          echo "ARQ=$ARQ.gpg" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crm-backup
+          path: ${{ env.ARQ }}
+          retention-days: 90
