@@ -71,8 +71,9 @@ export function useAviso() {
   return [el, mostrar];
 }
 
-export const textoDoStatus = (status, oQue = 'Registro') => (status === 'salvo'
-  ? `✓ ${oQue} salvo no banco`
+// oQue: "Visita" / "Contato"...; feminino ajusta a concordância ("Visita salva", "Contato salvo").
+export const textoDoStatus = (status, oQue = 'Registro', feminino = false) => (status === 'salvo'
+  ? `✓ ${oQue} ${feminino ? 'salva' : 'salvo'} no banco`
   : `⏳ ${oQue} pendente: sem conexão. Vai ser enviado sozinho quando o sinal voltar.`);
 
 function Login() {

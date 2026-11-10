@@ -16,7 +16,7 @@ export default function Registrar() {
   const salvar = async (f) => {
     try {
       const status = await gravarOps(opsRegistrarVisita(f));
-      mostrar(status, textoDoStatus(status, 'Visita'));
+      mostrar(status, textoDoStatus(status, 'Visita', true));
       return true;
     } catch (e) {
       mostrar('erro', `Não foi possível guardar: ${e.message || e}`);

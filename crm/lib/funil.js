@@ -24,7 +24,7 @@ function contar(leadsDaSemana, leadsComCotacao, leadsComVenda) {
   return {
     ...n,
     taxa_decisor: taxa(n.decisor, leadsDaSemana.length),
-    taxa_cotacao: taxa(n.cotacoes, n.decisor),
+    taxa_cotacao: taxa(n.cotacoes, leadsDaSemana.length),
     taxa_venda: taxa(n.vendas, n.cotacoes),
   };
 }

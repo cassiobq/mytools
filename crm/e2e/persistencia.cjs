@@ -68,7 +68,7 @@ async function preencher(page, empresa) {
   // Próximo passo sugerido: interessado = amanhã.
   assert.match(await page.inputValue('#proximo_passo'), /interessado/i);
   await page.getByRole('button', { name: 'Salvar visita' }).click();
-  await page.getByText('Visita salvo no banco').waitFor({ timeout: 15000 });
+  await page.getByText('Visita salva no banco').waitFor({ timeout: 15000 });
   ok('online: aviso "salvo no banco" apareceu');
   let r = await rest(s1, `leads?empresa=eq.${encodeURIComponent(nome1)}&select=*`);
   assert.equal(r.corpo.length, 1);
