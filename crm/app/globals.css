@@ -127,3 +127,9 @@ table.funil thead th { font-size: .78rem; color: var(--suave); }
   padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
 .dialogo .cab { display: flex; justify-content: space-between; align-items: center; }
 .fechar { font: inherit; font-size: 1.6rem; background: none; border: 0; color: var(--suave); min-width: 48px; min-height: 48px; }
+
+.periodo { display: flex; align-items: flex-end; gap: 8px; }
+.periodo label { flex: 1; min-width: 0; }
+.periodo .rot { display: block; }
+.periodo input { width: 100%; min-width: 0; }
+.periodo .seta { flex: 0 0 auto; padding-bottom: 14px; color: var(--suave); font-weight: 700; }

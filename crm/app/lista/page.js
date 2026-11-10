@@ -1,5 +1,5 @@
 'use client';
-// Todas as empresas: busca, edição, histórico, arquivar/desarquivar e exportação CSV.
+// Todas as empresas: busca, edição, histórico, arquivar/desarquivar, exportação XLSX e relatório.
 import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider.js';
 import { useAviso, textoDoStatus } from '../ui.js';
@@ -8,6 +8,7 @@ import FormLead, { formularioDoLead, rotuloDe, RESULTADOS } from '../FormLead.js
 import { opsEditar, opsArquivar } from '../../lib/acoes.js';
 import { gerarXLSX } from '../../lib/xlsx.js';
 import { hojeISO } from '../../lib/datas.js';
+import Relatorio from './Relatorio.js';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -27,6 +28,7 @@ export default function Lista() {
   const [verArquivados, setVerArquivados] = useState(false);
   const [editando, setEditando] = useState(null);
   const [historico, setHistorico] = useState(null);
+  const [relatorio, setRelatorio] = useState(false);
   const [aviso, mostrar] = useAviso();
 
   const filtrados = useMemo(() => {
@@ -60,6 +62,7 @@ export default function Lista() {
       </div>
       <div className="acoes" style={{ marginBottom: 14 }}>
         <button type="button" className="btn sec" onClick={async () => baixar(`crm-${hojeISO()}.xlsx`, await gerarXLSX(leads, contatos))}>Exportar XLSX</button>
+        <button type="button" className="btn sec" onClick={() => setRelatorio(true)}>Gerar relatório</button>
       </div>
       <p className="meta">{filtrados.length} de {leads.length} empresa{leads.length === 1 ? '' : 's'}</p>
       {!filtrados.length && <p className="vazio">Nenhuma empresa encontrada.</p>}
@@ -76,6 +79,7 @@ export default function Lista() {
           </div>
         </CardLead>
       ))}
+      {relatorio && <Relatorio onFechar={() => setRelatorio(false)} />}
       {editando && (
         <Dialogo titulo="Editar empresa" onFechar={() => setEditando(null)}>
           <FormLead modo="editar" inicial={formularioDoLead(editando)} textoBotao="Salvar alterações"
