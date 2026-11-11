@@ -119,7 +119,7 @@ async function preencher(page, empresa) {
   // 4) Reenvio da mesma operação (ex.: caiu o sinal depois de gravar): não duplica.
   const lead2 = r.corpo[0];
   await page.evaluate(async (linha) => {
-    const req = indexedDB.open('micro-crm', 2);
+    const req = indexedDB.open('micro-crm');
     await new Promise((res) => { req.onsuccess = res; });
     const tx = req.result.transaction('fila', 'readwrite');
     const { user_id, atualizado_em, ...semUser } = linha;

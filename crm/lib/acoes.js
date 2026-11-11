@@ -6,11 +6,9 @@ export const acaoAtiva = (acoes) => [...acoes].sort((a, b) => String(b.criado_em
 export function opsNovaAcao({ cidade, endereco }, acoes, agora = new Date()) {
   const c = String(cidade || '').trim();
   if (!c) throw new Error('Escolha a cidade da ação.');
-  const ops = [];
-  const anterior = acaoAtiva(acoes);
-  if (anterior && !anterior.finalizada_em) {
-    ops.push({ tabela: 'acoes', linha: { ...semExtras(anterior), finalizada_em: agora.toISOString() } });
-  }
+  // Finaliza toda ação ainda aberta (normalmente só a ativa).
+  const ops = acoes.filter((a) => !a.finalizada_em)
+    .map((a) => ({ tabela: 'acoes', linha: { ...semExtras(a), finalizada_em: agora.toISOString() } }));
   ops.push({
     tabela: 'acoes',
     linha: { id: crypto.randomUUID(), criado_em: new Date(agora.getTime() + 1).toISOString(), cidade: c, endereco: String(endereco || '').trim() || null, finalizada_em: null },

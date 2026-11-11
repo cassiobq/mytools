@@ -51,6 +51,7 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   // Ação de vendas: cidade obrigatória, rua opcional; vira a ativa e a anterior é finalizada.
   const antes = (await rest(s, 'acoes?select=id,finalizada_em&order=criado_em.desc&limit=1')).corpo[0];
   await page.goto(`${CRM_URL}/acoes/`);
+  if (antes) await page.getByText(/A ação atual \(.*\) será finalizada/).waitFor({ timeout: 15000 });
   await page.getByRole('group', { name: 'Cidade da ação' }).getByRole('button', { name: '+ Outra' }).click();
   await page.getByLabel('Cidade da ação').fill('Caçu');
   await page.locator('#endereco-acao').fill(`Rua ${t}`);
