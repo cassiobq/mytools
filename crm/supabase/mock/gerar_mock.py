@@ -46,8 +46,17 @@ def util(d):  # empurra para dia útil
 
 leads, contatos, acoes = [], [], []
 RUAS = ['Av. Presidente Vargas', 'Rua Rui Barbosa', 'Av. Brasil', 'Distrito Industrial', 'Av. Goiás', None, 'Rua Costa Gomes', 'Setor Morada do Sol', None]
+relogio = {}  # último horário de cada empresa: eventos do mesmo dia saem em ordem (abordagem -> MQL -> ...)
 def contato(lead, d, evento, etapa, **kw):
-    contatos.append({'id': str(uuid.uuid4()), 'lead_id': lead['id'], 'data': ts(d, random.randint(8, 17), random.randint(0, 59)),
+    ult = relogio.get(lead['id'])
+    if ult and ult.date() == d:
+        quando = ult + timedelta(minutes=random.randint(1, 4) if evento in ('mql', 'perda') else random.randint(20, 90))
+    elif not ult:
+        quando = datetime.fromisoformat(lead['criado_em'])
+    else:
+        quando = datetime(d.year, d.month, d.day, random.randint(8, 16), random.randint(0, 59), tzinfo=BRT)
+    relogio[lead['id']] = quando
+    contatos.append({'id': str(uuid.uuid4()), 'lead_id': lead['id'], 'data': quando.isoformat(),
                      'evento': evento, 'etapa': etapa, 'veiculos': kw.get('veiculos'), 'decisor': kw.get('decisor'),
                      'motivo': kw.get('motivo'), 'observacao': kw.get('obs')})
 
@@ -180,3 +189,35 @@ et = {}
 for l in leads: et[l['etapa']] = et.get(l['etapa'], 0) + 1
 print(len(acoes), 'ações', len(leads), 'leads', sum(1 for l in leads if l['lead_pai_id']), 'filhos', len(contatos), 'contatos', ev, et,
       'bandeiras', sum(l['bandeira'] for l in leads))
+
+# Versão compacta (um único SQL menor): ids determinísticos gerados no banco (md5 -> uuid), linhas como arrays JSON.
+if len(sys.argv) > 3:
+    import json
+    ia = {a['id']: i for i, a in enumerate(acoes)}
+    il = {l['id']: i for i, l in enumerate(leads)}
+    curto = lambda t: t[:16].replace('T', ' ') if t else None
+    A = [[ia[a['id']], curto(a['criado_em']), a['cidade'], a['endereco'], curto(a['finalizada_em'])] for a in acoes]
+    CL = [c for c in COLS_L if c not in ('id', 'acao_id', 'lead_pai_id', 'criado_em')]
+    L = [[il[l['id']], ia[l['acao_id']], il.get(l['lead_pai_id']), curto(l['criado_em'])] + [l[c] for c in CL] for l in leads]
+    C = [[il[c['lead_id']], curto(c['data']), c['evento'], c['etapa'], c['veiculos'], c['decisor'], c['motivo'], c['observacao']] for c in contatos]
+    j = lambda x: json.dumps(x, ensure_ascii=False, separators=(',', ':')).replace("'", "''")
+    U = q(USER)
+    ts_ = lambda e: f"(({e})::timestamp at time zone 'America/Sao_Paulo')"
+    uid = lambda p, e: f"md5('{p}'||({e}))::uuid"
+    tipos = {'falou_decisor': 'boolean', 'veiculos_mais': 'boolean', 'bandeira': 'boolean', 'arquivado': 'boolean', 'n_veiculos': 'int',
+             'n_segurados': 'int', 'nota_seguro': 'int', 'vencimento_seguro': 'date', 'data_proximo_passo': 'date', 'hora_proximo_passo': 'time'}
+    col = lambda c, k: f"(r->>{k})" + (f"::{tipos[c]}" if c in tipos else '')
+    with open(sys.argv[3], 'w') as f:
+        f.write(f"insert into public.acoes (user_id, id, criado_em, cidade, endereco, finalizada_em) select {U}, {uid('A', 'r->>0')}, {ts_('r->>1')}, r->>2, r->>3, {ts_('r->>4')} from jsonb_array_elements('{j(A)}'::jsonb) r;\n")
+        f.write(f"create temp table _mock_l as select r from jsonb_array_elements('{j(L)}'::jsonb) r;\n")
+        for pais in (True, False):  # primeiro os leads principais, depois os "segurados" (que apontam para eles)
+            f.write(f"insert into public.leads (user_id, id, acao_id, lead_pai_id, criado_em, {', '.join(CL)}) select {U}, {uid('L', 'r->>0')}, {uid('A', 'r->>1')}, "
+                    f"case when r->>2 is null then null else {uid('L', 'r->>2')} end, {ts_('r->>3')}, "
+                    + ', '.join(col(c, k + 4) for k, c in enumerate(CL))
+                    + f" from _mock_l where (r->>2 is null) = {'true' if pais else 'false'};\n")
+        f.write("drop table _mock_l;\n")
+        f.write(f"insert into public.contatos (user_id, id, lead_id, data, evento, etapa, veiculos, decisor, motivo, observacao) select {U}, md5('C'||o.n)::uuid, "
+                f"{uid('L', 'r->>0')}, {ts_('r->>1')}, r->>2, r->>3, (r->>4)::int, (r->>5)::boolean, r->>6, r->>7 "
+                f"from jsonb_array_elements('{j(C)}'::jsonb) with ordinality o(r, n);\n")
+        f.write(f"insert into public.config (id, user_id, metas) values ({U}, {U}, "
+                "'{\"leads\": 40, \"mql\": 16, \"sql\": 24, \"vendas\": 10, \"associados\": 8}') on conflict (id) do nothing;\n")
