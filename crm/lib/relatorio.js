@@ -18,42 +18,51 @@ export function textoDoPeriodo(p) {
 
 // Situação curta para o quadro-resumo e para o status sem IA.
 function statusDe(e) {
-  const partes = [e.resultado_atual];
-  if (e.situacao_atual) partes.push(e.situacao_atual.toLowerCase());
-  if (e.resultado_atual === 'Sem interesse' && e.motivo_nao) partes.push(e.motivo_nao.toLowerCase());
+  const partes = [e.etapa_atual];
+  if (e.fora_do_perfil) partes.push(`fora do perfil (${String(e.fora_do_perfil).toLowerCase()})`);
+  if (e.motivo_perda) partes.push(e.motivo_perda.toLowerCase());
+  if (e.proximo_passo && e.data_proximo_passo) partes.push(`${e.proximo_passo.toLowerCase()} em ${e.data_proximo_passo}`);
   if (e.arquivado) partes.push('arquivada');
   return [...new Set(partes.filter(Boolean))].join('; ');
 }
-const tipoDe = (e) => (e.tipo === 'Frota' ? `Frota${e.n_veiculos ? ` (${e.n_veiculos})` : ''}` : e.tipo || '');
+const frotaDe = (e) => (e.veiculos == null ? '' : `${e.veiculos} veíc.${e.veiculos_segurados != null ? ` (${e.veiculos_segurados} seg.)` : ''}`);
 
 // Versão sem IA de cada visita: só o que está registrado.
 function visitaSemIA(e) {
   const pontos = [];
   if (e.origem === 'Indicação') pontos.push(`Indicação${e.indicado_por ? ` de ${e.indicado_por}` : ''}.`);
-  if (e.tipo === 'Frota' && e.n_veiculos) pontos.push(`Frota de ${plural(e.n_veiculos, 'veículo', 'veículos')}.`);
-  if (e.falou_decisor != null) pontos.push(e.falou_decisor ? 'Falou com o decisor.' : 'Não falou com o decisor.');
-  if (e.vencimento_seguro) pontos.push(`Seguro atual vence em ${e.vencimento_seguro}.`);
-  for (const c of e.contatos) if (c.observacao) pontos.push(`${c.data} (${c.hora}): ${c.observacao}`);
-  const passo = e.proximo_passo ? `Próximo passo: ${e.proximo_passo}${e.data_proximo_passo ? ` em ${e.data_proximo_passo}` : ''}.` : '';
-  return { contato: '', pontos, status: `${statusDe(e)}.`, oportunidade: passo };
+  if (e.falou_decisor === false && !e.veiculos) pontos.push('Não encontrou o decisor.');
+  if (e.veiculos != null) {
+    pontos.push(e.veiculos === 0 ? 'Empresa sem veículos próprios.' : `Frota de ${e.veiculos} veículo(s), ${e.veiculos_segurados ?? 0} segurado(s).`);
+  }
+  if (e.veiculos_sem_seguro && e.por_que_nao_protegeu) pontos.push(`Por que não protegeu: ${e.por_que_nao_protegeu}.`);
+  if (e.seguradora) pontos.push(`Seguradora atual: ${e.seguradora}${e.nota_seguro_0a5 != null ? `, nota ${e.nota_seguro_0a5}/5` : ''}${e.vencimento_seguro ? `, vence em ${e.vencimento_seguro}` : ''}.`);
+  for (const c of e.contatos) {
+    const det = [c.evento, c.veiculos ? `${c.veiculos} veíc.` : null, c.motivo, c.observacao].filter(Boolean).join(' · ');
+    pontos.push(`${c.data} (${c.hora}): ${det}`);
+  }
+  return { contato: e.decisor || '', pontos, status: `${statusDe(e)}.`, oportunidade: '' };
 }
 
 // Resultados consolidados: sempre os números calculados, nunca os da IA.
 export function resultadosConsolidados(f) {
   const n = f.numeros;
+  const m = f.mercado;
+  const t = (x) => (x == null ? '—' : `${x}%`);
   const r = [
-    `${plural(n.empresas_contatadas, 'empresa trabalhada', 'empresas trabalhadas')} (${n.empresas_novas} ${n.empresas_novas === 1 ? 'nova' : 'novas'} e ${plural(n.retornos_a_empresas_antigas, 'retorno', 'retornos')}), em ${plural(n.contatos_registrados, 'contato registrado', 'contatos registrados')};`,
-    `${plural(n.frotas, 'frota prospectada', 'frotas prospectadas')}${n.veiculos_nas_frotas ? `, somando ${plural(n.veiculos_nas_frotas, 'veículo', 'veículos')}` : ''};`,
-    `${n.falou_com_decisor} ${n.falou_com_decisor === 1 ? 'conversa' : 'conversas'} com o decisor;`,
-    `${plural(n.cotacoes, 'cotação', 'cotações')} e ${plural(n.vendas, 'venda', 'vendas')}${n.vendas ? ` (${plural(n.veiculos_vendidos, 'veículo', 'veículos')})` : ''};`,
+    `${plural(n.leads_empresas_abordadas, 'empresa abordada', 'empresas abordadas')} (Lead) e ${plural(n.retornos, 'retorno', 'retornos')};`,
+    `${plural(n.mql_reunioes_agendadas, 'reunião agendada', 'reuniões agendadas')} (MQL), ${t(n.taxa_lead_mql_pct)} dos leads${n.reunioes_que_nao_aconteceram ? `; ${n.reunioes_que_nao_aconteceram} não aconteceram` : ''};`,
+    `${plural(n.sql_empresas_em_cotacao, 'empresa em cotação', 'empresas em cotação')} (SQL), somando ${plural(n.sql_veiculos_cotados, 'veículo cotado', 'veículos cotados')};`,
+    `${plural(n.vendas_veiculos, 'veículo vendido', 'veículos vendidos')} em ${plural(n.vendas_empresas, 'empresa', 'empresas')} (${t(n.taxa_sql_venda_veiculos_pct)} dos cotados);`,
+    `${plural(n.associados_veiculos, 'veículo associado', 'veículos associados')} (contratos assinados) em ${plural(n.associados_empresas, 'empresa', 'empresas')};`,
   ];
-  if (n.indicacoes_recebidas) r.push(`${plural(n.indicacoes_recebidas, 'indicação recebida', 'indicações recebidas')};`);
-  if (n.sem_interesse) {
-    const m = Object.entries(n.motivos_sem_interesse).map(([k, v]) => `${k.toLowerCase()}: ${v}`).join(', ');
-    r.push(`${n.sem_interesse} sem interesse${m ? ` (${m})` : ''};`);
+  if (m.empresas_com_decisor_pesquisadas) {
+    r.push(`Pesquisa com ${plural(m.empresas_com_decisor_pesquisadas, 'decisor', 'decisores')}: ${plural(m.veiculos_mapeados, 'veículo mapeado', 'veículos mapeados')}, ${m.veiculos_sem_seguro} sem seguro;`);
   }
-  const cid = Object.entries(n.empresas_por_cidade);
-  if (cid.length > 1) r.push(`Por cidade: ${cid.map(([c, v]) => `${c} ${v}`).join(', ')};`);
+  if (m.fora_do_perfil) r.push(`${plural(m.fora_do_perfil, 'empresa fora do perfil', 'empresas fora do perfil')};`);
+  const perdas = Object.entries(n.perdas_por_etapa_e_motivo);
+  if (perdas.length) r.push(`Perdas: ${perdas.map(([k, v]) => `${k} (${v})`).join(', ')};`);
+  if (n.indicacoes_recebidas) r.push(`${plural(n.indicacoes_recebidas, 'indicação trabalhada', 'indicações trabalhadas')};`);
   r.push(`${plural(f.periodo.dias_com_atividade, 'dia', 'dias')} com atividade no período.`);
   return r;
 }
@@ -102,13 +111,14 @@ export async function gerarRelatorioDOCX({ fatos, texto, participantes = '' }) {
 
   secao('Resumo Executivo');
   if (texto?.resumo_executivo?.length) texto.resumo_executivo.forEach((t) => corpo.push(p(t)));
-  else corpo.push(p(`No período de ${periodo}, foram ${plural(fatos.numeros.empresas_contatadas, 'empresa trabalhada', 'empresas trabalhadas')} em ${cidades}, com ${plural(fatos.numeros.contatos_registrados, 'contato registrado', 'contatos registrados')}.`));
+  else corpo.push(p(`No período de ${periodo}, foram ${plural(fatos.numeros.leads_empresas_abordadas, 'empresa abordada', 'empresas abordadas')} e ${plural(fatos.empresas.length, 'empresa trabalhada', 'empresas trabalhadas')} no total, em ${cidades}.`));
 
   if (texto?.panorama?.length) { secao('Panorama do Campo'); texto.panorama.forEach((t) => corpo.push(item(t))); }
 
   const grupos = [
-    ['Prospecção de Frotas', fatos.empresas.filter((e) => e.tipo === 'Frota')],
-    ['Prospecção de Pessoa Física', fatos.empresas.filter((e) => e.tipo !== 'Frota')],
+    ['Negociações em Andamento e Fechamentos', fatos.empresas.filter((e) => ['MQL', 'SQL', 'Venda', 'Associado'].includes(e.etapa_atual))],
+    ['Abordagens e Retornos', fatos.empresas.filter((e) => e.etapa_atual === 'Lead' && !e.fora_do_perfil)],
+    ['Perdidas e Fora do Perfil', fatos.empresas.filter((e) => e.etapa_atual === 'Perdido' || (e.etapa_atual === 'Lead' && e.fora_do_perfil))],
   ].filter(([, es]) => es.length);
   for (const [titulo, es] of grupos) {
     secao(titulo);
@@ -120,16 +130,37 @@ export async function gerarRelatorioDOCX({ fatos, texto, participantes = '' }) {
       if (v.contato) corpo.push(item(v.contato, 'Contato'));
       v.pontos.forEach((t) => corpo.push(item(t)));
       if (v.status) corpo.push(item(v.status, 'Status'));
-      if (v.oportunidade) corpo.push(item(v.oportunidade, texto ? 'Oportunidade' : undefined));
+      if (v.oportunidade) corpo.push(item(v.oportunidade, 'Oportunidade'));
     });
+  }
+
+  // Leitura do mercado (pesquisa das abordagens): números calculados.
+  const m = fatos.mercado;
+  if (m.empresas_com_decisor_pesquisadas) {
+    secao('Leitura do Mercado');
+    const segPct = m.veiculos_mapeados ? Math.round((m.veiculos_segurados / m.veiculos_mapeados) * 100) : 0;
+    corpo.push(item(`${plural(m.empresas_com_decisor_pesquisadas, 'empresa pesquisada', 'empresas pesquisadas')} com o decisor; ${m.empresas_sem_veiculos} sem veículos.`));
+    corpo.push(item(`${plural(m.veiculos_mapeados, 'veículo mapeado', 'veículos mapeados')}: ${segPct}% segurados e ${m.veiculos_sem_seguro} sem seguro.`));
+    corpo.push(item(`Frota toda segurada: ${m.empresas_com_toda_frota_segurada} · parte segurada: ${m.empresas_com_parte_segurada} · nenhum seguro: ${m.empresas_sem_nenhum_seguro}.`));
+    if (m.nota_media_seguro_atual != null) corpo.push(item(`Nota média do seguro atual: ${String(m.nota_media_seguro_atual).replace('.', ',')}/5 (${m.satisfeitos_nota_4_ou_5} satisfeitos, nota 4 ou 5).`));
+    const mot = Object.entries(m.por_que_nao_protegeram);
+    if (mot.length) corpo.push(item(mot.sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} (${v})`).join(', '), 'Por que não protegeram'));
+    if (m.seguradoras.length) {
+      const lg = [3400, 1800, 1800, 2026];
+      corpo.push(new Paragraph({ spacing: { before: 120 } }));
+      corpo.push(tabela(lg, [
+        new TableRow({ tableHeader: true, children: ['Seguradora', 'Empresas', 'Veículos', 'Nota média'].map((t, i) => cel(t, lg[i], { negrito: true, fundo: AZUL, cor: 'FFFFFF' })) }),
+        ...m.seguradoras.map((x) => new TableRow({ cantSplit: true, children: [cel(x.nome, lg[0]), cel(x.empresas, lg[1]), cel(x.veiculos, lg[2]), cel(x.nota_media == null ? '—' : String(x.nota_media).replace('.', ','), lg[3])] })),
+      ]));
+    }
   }
 
   secao('Quadro-Resumo das Visitas');
   const larg = [2700, 2000, 1500, 2826];
-  const cab = new TableRow({ tableHeader: true, children: ['Empresa', 'Contato', 'Tipo', 'Status'].map((t, i) => cel(t, larg[i], { negrito: true, fundo: AZUL, cor: 'FFFFFF' })) });
+  const cab = new TableRow({ tableHeader: true, children: ['Empresa', 'Decisor', 'Frota', 'Status'].map((t, i) => cel(t, larg[i], { negrito: true, fundo: AZUL, cor: 'FFFFFF' })) });
   corpo.push(tabela(larg, [cab, ...fatos.empresas.map((e) => new TableRow({
     cantSplit: true,
-    children: [cel(e.empresa, larg[0]), cel(porId.get(e.id)?.contato || '', larg[1]), cel(tipoDe(e), larg[2]), cel(statusDe(e), larg[3])],
+    children: [cel(e.empresa, larg[0]), cel(porId.get(e.id)?.contato || e.decisor || '', larg[1]), cel(frotaDe(e), larg[2]), cel(statusDe(e), larg[3])],
   }))]));
 
   secao('Resultados Consolidados');
@@ -139,7 +170,7 @@ export async function gerarRelatorioDOCX({ fatos, texto, participantes = '' }) {
   secao('Próximos Passos');
   if (texto?.proximos_passos?.length) texto.proximos_passos.forEach((t) => corpo.push(item(t)));
   else {
-    const passos = fatos.empresas.filter((e) => e.proximo_passo && !e.arquivado && e.resultado_atual !== 'Venda');
+    const passos = fatos.empresas.filter((e) => e.proximo_passo && e.data_proximo_passo && !e.arquivado);
     if (passos.length) passos.forEach((e) => corpo.push(item(`${e.empresa}: ${e.proximo_passo}${e.data_proximo_passo ? ` (${e.data_proximo_passo})` : ''}.`)));
     else corpo.push(p('Nenhum próximo passo registrado.'));
   }

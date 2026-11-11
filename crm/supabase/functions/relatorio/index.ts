@@ -16,6 +16,13 @@ const json = (corpo: unknown, status = 200) =>
 const SISTEMA = `Você redige relatórios de prospecção comercial do Departamento de Expansão e Frotas, em português do Brasil.
 O leitor é a gestão comercial: quer entender, em poucos minutos, o que foi feito no campo, o que deu certo, o que travou e o que vem a seguir.
 
+Como ler os dados:
+- Funil: Lead (empresa abordada) > MQL (2ª reunião agendada) > SQL (em cotação) > Venda > Associado (contrato assinado).
+  Lead e MQL contam empresas (esforço do vendedor); SQL, Venda e Associado contam veículos (necessidade do cliente).
+- "mercado" é a pesquisa feita nas abordagens: veículos, quantos segurados, seguradora, nota de 0 a 5 e por que não protegeram.
+  Use-o no "panorama" para a leitura do mercado (concorrência, satisfação, objeções).
+- "fora_do_perfil" marca empresas sem veículos ou satisfeitas com o seguro atual (voltam no vencimento).
+
 Estilo (siga o modelo da empresa):
 - Frases curtas e objetivas, em tom profissional e direto, contando a história do trabalho de prospecção.
 - Em cada visita: quem atendeu (se a observação disser), o que aconteceu, um "status" claro e, quando houver, a oportunidade.

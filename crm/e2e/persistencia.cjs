@@ -33,14 +33,18 @@ async function escolher(page, grupo, nome) {
   if ((await b.getAttribute('aria-pressed')) !== 'true') await b.click();
 }
 
+// Visita com o decisor: 3 veículos, nenhum segurado, reunião agendada (vira MQL).
 async function preencher(page, empresa) {
   await page.fill('#empresa', empresa);
-  await escolher(page, 'Tipo', 'Frota');
-  await page.getByRole('button', { name: '10', exact: true }).click();
-  await escolher(page, 'Estratégia', 'Visita p/ agendar');
   await escolher(page, 'Falou com o decisor', 'Sim');
-  await escolher(page, 'Resultado', 'Cotação');
-  await escolher(page, 'Situação', 'Interessado');
+  await page.fill('#decisor_nome', 'Rafael, dono');
+  await page.fill('#decisor_whatsapp', '(64) 99999-0000');
+  await escolher(page, 'Veículos', '3');
+  await escolher(page, 'Segurados', '0');
+  await escolher(page, 'Motivo sem seguro', 'Não é prioridade');
+  await escolher(page, 'Agendou reunião', 'Sim');
+  await page.getByRole('group', { name: 'Atalhos: Data e hora da reunião' }).getByRole('button', { name: '+2 dias' }).click();
+  await page.getByLabel('Hora: Data e hora da reunião').fill('14:30');
   await page.fill('#observacao', 'Teste automático');
 }
 
@@ -57,7 +61,7 @@ async function preencher(page, empresa) {
   const erros = [];
   page.on('pageerror', (e) => erros.push(e.message));
 
-  const inicial = (await rest(s1, 'leads?arquivado=eq.false&select=id')).corpo.length;
+  const inicial = (await rest(s1, 'leads?arquivado=eq.false&lead_pai_id=is.null&select=id')).corpo.length;
   const contadorDeve = (n) => page.getByTestId('contador').filter({ hasText: new RegExp(`^${n} empresa`) }).waitFor({ timeout: 20000 });
   await page.goto(CRM_URL);
   await contadorDeve(inicial);
@@ -65,26 +69,24 @@ async function preencher(page, empresa) {
   // 1) Online: registrar, só aparece "salvo" depois do banco.
   const nome1 = `Teste Online ${Date.now()}`;
   await preencher(page, nome1);
-  // Próximo passo sugerido: interessado = amanhã.
-  assert.match(await page.inputValue('#proximo_passo'), /interessado/i);
   await page.getByRole('button', { name: 'Salvar visita' }).click();
   await page.getByText('Visita salva no banco').waitFor({ timeout: 15000 });
   ok('online: aviso "salvo no banco" apareceu');
   let r = await rest(s1, `leads?empresa=eq.${encodeURIComponent(nome1)}&select=*`);
   assert.equal(r.corpo.length, 1);
-  assert.equal(r.corpo[0].resultado, 'cotacao');
-  assert.equal(r.corpo[0].n_veiculos, 10);
+  assert.equal(r.corpo[0].etapa, 'mql');
+  assert.equal(r.corpo[0].n_veiculos, 3);
+  assert.equal(r.corpo[0].n_segurados, 0);
+  assert.equal(r.corpo[0].hora_proximo_passo, '14:30:00');
   assert.equal(r.corpo[0].cidade, 'Rio Verde');
-  const c1 = await rest(s1, `contatos?lead_id=eq.${r.corpo[0].id}&select=*`);
-  assert.equal(c1.corpo.length, 1);
-  ok('online: lead e contato no banco, com os campos certos');
+  const c1 = await rest(s1, `contatos?lead_id=eq.${r.corpo[0].id}&select=evento&order=data`);
+  assert.deepEqual(c1.corpo.map((c) => c.evento), ['abordagem', 'mql']);
+  ok('online: lead (MQL, 3 veículos, reunião 14h30) e eventos abordagem + MQL no banco');
   await page.reload();
   await contadorDeve(inicial + 1);
   ok('online: depois de recarregar, contador = inicial + 1');
-  // Lembrou estratégia e tipo.
-  assert.equal(await page.getByRole('group', { name: 'Tipo' }).getByRole('button', { name: 'Frota' }).getAttribute('aria-pressed'), 'true');
-  assert.equal(await page.getByRole('group', { name: 'Estratégia' }).getByRole('button', { name: 'Visita p/ agendar' }).getAttribute('aria-pressed'), 'true');
-  ok('lembrou tipo, estratégia e cidade');
+  assert.equal(await page.getByRole('group', { name: 'Cidade' }).getByRole('button', { name: 'Rio Verde' }).getAttribute('aria-pressed'), 'true');
+  ok('lembrou a cidade');
 
   // 2) Sem sinal: fica pendente, não vai ao banco, sobrevive a recarregar.
   await ctx.setOffline(true);
@@ -107,13 +109,13 @@ async function preencher(page, empresa) {
   r = await rest(s1, `leads?empresa=eq.${encodeURIComponent(nome2)}&select=*`);
   assert.equal(r.corpo.length, 1);
   const c2 = await rest(s1, `contatos?lead_id=eq.${r.corpo[0].id}&select=id`);
-  assert.equal(c2.corpo.length, 1);
-  ok('sinal voltou: sincronizou sozinho, 1 lead e 1 contato no banco');
+  assert.equal(c2.corpo.length, 2);
+  ok('sinal voltou: sincronizou sozinho, 1 lead e 2 eventos no banco');
 
   // 4) Reenvio da mesma operação (ex.: caiu o sinal depois de gravar): não duplica.
   const lead2 = r.corpo[0];
   await page.evaluate(async (linha) => {
-    const req = indexedDB.open('micro-crm', 1);
+    const req = indexedDB.open('micro-crm', 2);
     await new Promise((res) => { req.onsuccess = res; });
     const tx = req.result.transaction('fila', 'readwrite');
     const { user_id, atualizado_em, ...semUser } = linha;

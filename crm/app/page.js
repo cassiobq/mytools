@@ -11,7 +11,7 @@ export default function Registrar() {
   const [inicial, setInicial] = useState(null);
   const [vez, setVez] = useState(0); // troca a "key" para limpar o formulário depois de salvar
   const [aviso, mostrar] = useAviso();
-  useEffect(() => { setInicial(pesquisaVazia(lerPrefs())); }, [vez]);
+  useEffect(() => { setInicial(pesquisaVazia(lerPrefs())); }, []);
   if (!inicial) return null;
 
   const salvar = async (f) => {
@@ -28,7 +28,7 @@ export default function Registrar() {
   return (
     <main>
       <h1>Registrar visita</h1>
-      <Pesquisa key={vez} inicial={inicial} onSalvar={salvar} aoLimpar={() => { setInicial(null); setVez((v) => v + 1); }} />
+      <Pesquisa key={vez} inicial={inicial} onSalvar={salvar} aoLimpar={() => { setInicial(pesquisaVazia(lerPrefs())); setVez((v) => v + 1); }} />
       {aviso}
     </main>
   );

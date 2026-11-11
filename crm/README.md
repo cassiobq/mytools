@@ -4,11 +4,23 @@ PWA de prospecção (pt-BR, celular primeiro): Next.js (export estático) + Supa
 Produção: https://micro-crm-virid.vercel.app — projeto Vercel `micro-crm` (pasta `crm/` deste repositório).
 Supabase: projeto `micro-crm` (`oqxzggcmjqgrdfddgjwd`, São Paulo).
 
-## Telas
-- **Registrar**: visita em poucos toques; lembra cidade, tipo e estratégia; sugere o próximo passo pela cadência.
-- **Hoje**: retornos de hoje e atrasados; registrar contato; arquivar.
-- **Funil**: semana a semana, por estratégia, com a linha de base N/50 abordagens de frota.
-- **Lista**: busca, edição, histórico, **Exportar XLSX** e **Gerar relatório** (.docx no layout do relatório de viagem).
+## Telas (menu ☰)
+- **Registrar visita** (tela inicial): pesquisa da abordagem que muda conforme as respostas —
+  decisor? → nome e WhatsApp → veículos (0–4+) → segurados → motivo / seguradora, vencimento e nota → follow-up.
+  0 veículos ou nota 4–5 = 🚩 fora do perfil. Frota com parte segurada cria um 2º lead (os segurados) para o vencimento.
+- **Hoje**: retornos atrasados e do dia (por horário) e negociações “esfriando”. Registrar contato: em Lead refaz a
+  pesquisa (conta como retorno); em MQL/SQL/Venda registra o andamento (cotação, no-show, venda, contrato, perda).
+- **Painel**: velocímetros das metas (semana anda em 5 dias), funil com taxas e gargalo, simulador, leitura do
+  mercado, conversão por origem/cidade e tempo de ciclo.
+- **Empresas**: busca, filtros (etapa, 🚩, nº de veículos), reativar, editar, histórico, **Exportar XLSX** (só as
+  filtradas) e **Gerar relatório** (.docx no layout do relatório de viagem).
+- **Metas e configurações**: metas mensais por etapa (semana = ÷ 4), cadência padrão dos atalhos de data, dias para
+  “esfriando”.
+
+## Funil
+Lead (empresa abordada) → MQL (2ª reunião agendada) → SQL (em cotação) → Venda → Associado (contrato assinado).
+Lead e MQL em **empresas** (esforço); SQL, Venda e Associado em **veículos** (necessidade do cliente).
+Cada passo é um evento em `contatos.evento`; o painel conta os eventos do período.
 
 ## Regra nº 1 (persistência)
 Nada aparece como "salvo" antes do banco confirmar. Sem sinal, o registro vai para uma fila no IndexedDB
