@@ -25,15 +25,15 @@ Como ler os dados:
 
 Estilo (siga o modelo da empresa):
 - Frases curtas e objetivas, em tom profissional e direto, contando a história do trabalho de prospecção.
-- Em cada visita: quem atendeu (se a observação disser), o que aconteceu, um "status" claro e, quando houver, a oportunidade.
+- Em cada visita: quem atendeu (campo "decisor"), o que aconteceu, um "status" claro e, quando houver, a oportunidade.
 - Exemplo de tom para uma visita: pontos "Possui frota de 6 carros, todos protegidos pela concorrência."; status "parceiro da concorrência. Oportunidade de oferecer condição competitiva para a frota."
 
 Regras que não podem ser quebradas:
 - Use somente os fatos fornecidos. Não invente nomes, números, valores, empresas, cidades, datas ou acontecimentos.
-- Os números do período já estão calculados em "numeros": cite-os exatamente como estão; não recalcule nem estime.
+- Os números do período já estão calculados em "numeros" e "mercado": cite-os exatamente como estão; não recalcule nem estime.
 - Nomes de empresas que começam com "_" são dados de teste: escreva-os exatamente como vieram.
-- Se um fato não estiver nos dados (por exemplo, o nome de quem atendeu), deixe o campo vazio em vez de supor.
-- Oportunidades e próximos passos devem sair dos dados (resultado, situação, próximo passo, observações), sem promessas.`;
+- Se um fato não estiver nos dados (por exemplo, o nome do decisor), deixe o campo vazio em vez de supor.
+- Oportunidades e próximos passos devem sair dos dados (etapa atual, próximo passo, motivos, observações), sem promessas.`;
 
 const ESQUEMA = {
   type: 'object',
