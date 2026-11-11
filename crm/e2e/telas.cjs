@@ -31,7 +31,8 @@ const foto = async (page, nome) => { if (FOTOS) await page.screenshot({ path: `$
 // Salva e espera o aviso DESTE salvamento (o aviso anterior some antes).
 async function salvarVisita(page) {
   await page.getByText('Visita salva no banco').waitFor({ state: 'detached', timeout: 10000 });
-  await salvarVisita(page);
+  await page.getByRole('button', { name: 'Salvar visita' }).click();
+  await page.getByText('Visita salva no banco').waitFor({ timeout: 15000 });
 }
 const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIComponent(empresa)}&select=*`)).corpo;
 
