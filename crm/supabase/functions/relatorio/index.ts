@@ -50,7 +50,7 @@ const ESQUEMA = {
         required: ['lead_id', 'contato', 'pontos', 'status', 'oportunidade'],
         properties: {
           lead_id: { type: 'string' },
-          contato: { type: 'string', description: 'Quem atendeu, se as observações disserem; senão vazio' },
+          contato: { type: 'string', description: 'Quem atendeu (campo "decisor"); senão vazio' },
           pontos: { type: 'array', items: { type: 'string' } },
           status: { type: 'string' },
           oportunidade: { type: 'string', description: 'Vazio se não houver' },
