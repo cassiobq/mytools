@@ -1,21 +1,22 @@
 'use client';
-// Tela inicial: registrar uma visita em poucos toques.
+// Tela inicial: registrar uma visita (pesquisa da abordagem).
 import { useEffect, useState } from 'react';
 import { useApp } from './AppProvider.js';
-import FormLead, { formularioVazio, lerPrefs } from './FormLead.js';
+import Pesquisa, { lerPrefs } from './Pesquisa.js';
 import { useAviso, textoDoStatus } from './ui.js';
-import { opsRegistrarVisita } from '../lib/acoes.js';
+import { pesquisaVazia, opsPesquisa } from '../lib/pesquisa.js';
 
 export default function Registrar() {
   const { gravarOps } = useApp();
   const [inicial, setInicial] = useState(null);
+  const [vez, setVez] = useState(0); // troca a "key" para limpar o formulário depois de salvar
   const [aviso, mostrar] = useAviso();
-  useEffect(() => { setInicial(formularioVazio(lerPrefs())); }, []);
+  useEffect(() => { setInicial(pesquisaVazia(lerPrefs())); }, [vez]);
   if (!inicial) return null;
 
   const salvar = async (f) => {
     try {
-      const status = await gravarOps(opsRegistrarVisita(f));
+      const status = await gravarOps(opsPesquisa(f));
       mostrar(status, textoDoStatus(status, 'Visita', true));
       return true;
     } catch (e) {
@@ -27,7 +28,7 @@ export default function Registrar() {
   return (
     <main>
       <h1>Registrar visita</h1>
-      <FormLead inicial={inicial} onSalvar={salvar} textoBotao="Salvar visita" />
+      <Pesquisa key={vez} inicial={inicial} onSalvar={salvar} aoLimpar={() => { setInicial(null); setVez((v) => v + 1); }} />
       {aviso}
     </main>
   );

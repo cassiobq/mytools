@@ -26,6 +26,7 @@ export default function AppProvider({ children }) {
   const [sessao, setSessao] = useState(undefined); // undefined = ainda verificando
   const [leads, setLeads] = useState([]);
   const [contatos, setContatos] = useState([]);
+  const [config, setConfig] = useState(null);
   const [fila, setFila] = useState([]);
   const [online, setOnline] = useState(true);
   const [erroSync, setErroSync] = useState(null);
@@ -35,18 +36,21 @@ export default function AppProvider({ children }) {
   const aplicar = useCallback((base, filaAtual) => {
     const porId = new Map(base.leads.map((l) => [l.id, l]));
     const cts = new Map(base.contatos.map((c) => [c.id, c]));
+    let cfg = base.config?.[0] || null;
     for (const op of filaAtual) {
       if (op.tabela === 'leads') porId.set(op.linha.id, { ...(porId.get(op.linha.id) || {}), ...op.linha });
+      else if (op.tabela === 'config') cfg = { ...(cfg || {}), ...op.linha };
       else cts.set(op.linha.id, op.linha);
     }
+    setConfig(cfg);
     setLeads([...porId.values()].sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em))));
     setContatos([...cts.values()]);
     setFila(filaAtual);
   }, []);
 
   const recarregarLocal = useCallback(async () => {
-    const [l, c, f] = await Promise.all([local.todos('leads'), local.todos('contatos'), local.todos('fila')]);
-    aplicar({ leads: l, contatos: c }, f.sort((a, b) => a.seq - b.seq));
+    const [l, c, cfg, f] = await Promise.all([local.todos('leads'), local.todos('contatos'), local.todos('config'), local.todos('fila')]);
+    aplicar({ leads: l, contatos: c, config: cfg }, f.sort((a, b) => a.seq - b.seq));
   }, [aplicar]);
 
   // Envia a fila e, se deu tudo certo, baixa a versão do banco.
@@ -60,9 +64,10 @@ export default function AppProvider({ children }) {
     setErroSync(r.erro);
     if (!r.erro) {
       try {
-        const [l, c] = await Promise.all([buscarTudo(sb, 'leads', 'criado_em'), buscarTudo(sb, 'contatos', 'data')]);
+        const [l, c, cfg] = await Promise.all([buscarTudo(sb, 'leads', 'criado_em'), buscarTudo(sb, 'contatos', 'data'), buscarTudo(sb, 'config', 'id')]);
         await local.substituir('leads', l);
         await local.substituir('contatos', c);
+        await local.substituir('config', cfg);
       } catch (e) {
         setErroSync(String(e.message || e));
       }
@@ -108,10 +113,12 @@ export default function AppProvider({ children }) {
   // Ao entrar (ou reabrir com sessão), sincroniza.
   useEffect(() => { if (sessao) sincronizarAgora(); }, [sessao?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pendentes = useMemo(() => new Set(fila.map((op) => op.tabela === 'leads' ? op.linha.id : op.linha.lead_id)), [fila]);
+  // Empresas com algo na fila (uma visita = lead + contatos = 1 pendente). Configurações não contam.
+  const pendentes = useMemo(() => new Set(fila.filter((op) => op.tabela !== 'config')
+    .map((op) => (op.tabela === 'leads' ? op.linha.id : op.linha.lead_id))), [fila]);
 
   const valor = {
-    sb, sessao, leads, contatos, fila, pendentes, online, erroSync,
+    sb, sessao, leads, contatos, config, fila, pendentes, online, erroSync,
     gravarOps, sincronizarAgora,
     sair: async () => { await sb.auth.signOut(); },
   };

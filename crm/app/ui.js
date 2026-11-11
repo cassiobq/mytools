@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './AppProvider.js';
-import { hojeISO } from '../lib/datas.js';
+import { estaNaAgenda } from '../lib/etapas.js';
 
 // Grupo de botões grandes; clicar de novo no escolhido desmarca (quando permitido).
 export function Escolha({ opcoes, valor, onChange, duas = false, chips = false, rotulo, desmarcavel = true }) {
@@ -122,42 +122,49 @@ function Login() {
   );
 }
 
+// Topo: menu ☰ (com o nº de retornos de hoje), contador e situação da sincronização.
 function Topo() {
   const { leads, pendentes, online, erroSync, sincronizarAgora } = useApp();
-  const n = leads.filter((l) => !l.arquivado).length;
-  const pend = pendentes.size; // empresas com algo na fila (uma visita = lead + contato = 1 pendente)
+  const [aberto, setAberto] = useState(false);
+  const caminho = usePathname();
+  useEffect(() => { setAberto(false); }, [caminho]);
+  const n = leads.filter((l) => !l.arquivado && !l.lead_pai_id).length;
+  const nHoje = leads.filter((l) => estaNaAgenda(l)).length;
+  const pend = pendentes.size; // empresas com algo na fila (uma visita = lead + contatos = 1 pendente)
   let cls = 'ok';
   let txt = online ? 'Sincronizado' : 'Sem sinal';
   if (pend) { cls = 'pend'; txt = `${pend} pendente${pend > 1 ? 's' : ''}`; }
   if (erroSync && online && pend) { cls = 'erro'; txt = 'Erro ao enviar'; }
-  return (
-    <header className="topo">
-      <span className="contador" data-testid="contador">{n} {n === 1 ? 'empresa registrada' : 'empresas registradas'}</span>
-      <button type="button" className={`status ${cls}`} onClick={() => sincronizarAgora()} title={erroSync || 'Tocar para sincronizar'}>{txt}</button>
-    </header>
-  );
-}
-
-function Nav() {
-  const { leads } = useApp();
-  const caminho = usePathname();
-  const hoje = hojeISO();
-  const nHoje = leads.filter((l) => !l.arquivado && l.data_proximo_passo && l.data_proximo_passo <= hoje && l.resultado !== 'venda').length;
   const itens = [
-    { href: '/', ico: '＋', rot: 'Registrar' },
+    { href: '/', ico: '＋', rot: 'Registrar visita' },
     { href: '/hoje/', ico: '☑', rot: 'Hoje', badge: nHoje },
-    { href: '/funil/', ico: '▼', rot: 'Funil' },
-    { href: '/lista/', ico: '☰', rot: 'Lista' },
+    { href: '/painel/', ico: '◔', rot: 'Painel' },
+    { href: '/lista/', ico: '☰', rot: 'Empresas' },
+    { href: '/config/', ico: '⚙', rot: 'Metas e configurações' },
   ];
+  const ativo = (h) => caminho === h || `${caminho}/` === h;
   return (
-    <nav className="nav">
-      {itens.map((i) => (
-        <Link key={i.href} href={i.href} className={caminho === i.href || caminho + '/' === i.href ? 'ativo' : ''}>
-          <span className="ico" aria-hidden="true">{i.ico}</span>{i.rot}
-          {i.badge ? <span className="badge">{i.badge}</span> : null}
-        </Link>
-      ))}
-    </nav>
+    <>
+      <header className="topo">
+        <button type="button" className="menu-btn" aria-label="Abrir menu" aria-expanded={aberto} onClick={() => setAberto((a) => !a)}>
+          ☰{nHoje ? <span className="badge" data-testid="badge-hoje">{nHoje}</span> : null}
+        </button>
+        <span className="contador" data-testid="contador">{n} {n === 1 ? 'empresa registrada' : 'empresas registradas'}</span>
+        <button type="button" className={`status ${cls}`} onClick={() => sincronizarAgora()} title={erroSync || 'Tocar para sincronizar'}>{txt}</button>
+      </header>
+      {aberto && (
+        <div className="menu-fundo" onClick={() => setAberto(false)}>
+          <nav className="menu" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
+            {itens.map((i) => (
+              <Link key={i.href} href={i.href} className={ativo(i.href) ? 'ativo' : ''} onClick={() => setAberto(false)}>
+                <span className="ico" aria-hidden="true">{i.ico}</span>{i.rot}
+                {i.badge ? <span className="badge">{i.badge}</span> : null}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -165,5 +172,5 @@ export function Shell({ children }) {
   const { sessao } = useApp();
   if (sessao === undefined) return <main className="vazio">Carregando…</main>;
   if (!sessao) return <Login />;
-  return (<><Topo />{children}<Nav /></>);
+  return (<><Topo />{children}</>);
 }
