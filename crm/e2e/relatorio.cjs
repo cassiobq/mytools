@@ -15,8 +15,11 @@ const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d
     method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' },
     body: JSON.stringify({ email: TESTE_EMAIL, password: TESTE_SENHA }),
   })).json();
-  const leads = await (await fetch(`${SUPABASE_URL}/rest/v1/leads?select=empresa`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${s.access_token}` } })).json();
-  assert.ok(leads.length > 0, 'o usuário de teste precisa ter ao menos uma empresa');
+  const get = async (c) => (await fetch(`${SUPABASE_URL}/rest/v1/${c}`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${s.access_token}` } })).json();
+  // O relatório traz as empresas com algum contato no período (aqui: todo o histórico).
+  const comContato = new Set((await get('contatos?select=lead_id')).map((c) => c.lead_id));
+  const leads = (await get('leads?select=id,empresa')).filter((l) => comContato.has(l.id));
+  assert.ok(leads.length > 0, 'o usuário de teste precisa ter ao menos uma empresa com contato');
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
@@ -63,8 +66,9 @@ const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d
   assert.match(texto, /Equipe de Teste/);
   assert.match(texto, /Quadro-Resumo das Visitas/);
   assert.match(texto, /Resultados Consolidados/);
+  assert.match(texto, /Leitura do Mercado/);
   for (const l of leads) assert.ok(texto.includes(l.empresa.replace(/&/g, '&amp;')), `faltou ${l.empresa} no relatório`);
-  ok(`.docx baixado, no layout do modelo, com as ${leads.length} empresas do período`);
+  ok(`.docx baixado, no layout do modelo, com as ${leads.length} empresas que tiveram contato no período`);
 
   // Participantes lembrados.
   await page.reload();
