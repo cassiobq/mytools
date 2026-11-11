@@ -27,6 +27,7 @@ export default function AppProvider({ children }) {
   const [leads, setLeads] = useState([]);
   const [contatos, setContatos] = useState([]);
   const [config, setConfig] = useState(null);
+  const [acoes, setAcoes] = useState([]);
   const [fila, setFila] = useState([]);
   const [online, setOnline] = useState(true);
   const [erroSync, setErroSync] = useState(null);
@@ -37,20 +38,23 @@ export default function AppProvider({ children }) {
     const porId = new Map(base.leads.map((l) => [l.id, l]));
     const cts = new Map(base.contatos.map((c) => [c.id, c]));
     let cfg = base.config?.[0] || null;
+    const acs = new Map((base.acoes || []).map((a) => [a.id, a]));
     for (const op of filaAtual) {
       if (op.tabela === 'leads') porId.set(op.linha.id, { ...(porId.get(op.linha.id) || {}), ...op.linha });
       else if (op.tabela === 'config') cfg = { ...(cfg || {}), ...op.linha };
+      else if (op.tabela === 'acoes') acs.set(op.linha.id, { ...(acs.get(op.linha.id) || {}), ...op.linha });
       else cts.set(op.linha.id, op.linha);
     }
     setConfig(cfg);
+    setAcoes([...acs.values()]);
     setLeads([...porId.values()].sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em))));
     setContatos([...cts.values()]);
     setFila(filaAtual);
   }, []);
 
   const recarregarLocal = useCallback(async () => {
-    const [l, c, cfg, f] = await Promise.all([local.todos('leads'), local.todos('contatos'), local.todos('config'), local.todos('fila')]);
-    aplicar({ leads: l, contatos: c, config: cfg }, f.sort((a, b) => a.seq - b.seq));
+    const [l, c, cfg, ac, f] = await Promise.all([local.todos('leads'), local.todos('contatos'), local.todos('config'), local.todos('acoes'), local.todos('fila')]);
+    aplicar({ leads: l, contatos: c, config: cfg, acoes: ac }, f.sort((a, b) => a.seq - b.seq));
   }, [aplicar]);
 
   // Envia a fila e, se deu tudo certo, baixa a versão do banco.
@@ -64,10 +68,12 @@ export default function AppProvider({ children }) {
     setErroSync(r.erro);
     if (!r.erro) {
       try {
-        const [l, c, cfg] = await Promise.all([buscarTudo(sb, 'leads', 'criado_em'), buscarTudo(sb, 'contatos', 'data'), buscarTudo(sb, 'config', 'id')]);
+        const [l, c, cfg, ac] = await Promise.all([buscarTudo(sb, 'leads', 'criado_em'), buscarTudo(sb, 'contatos', 'data'),
+          buscarTudo(sb, 'config', 'id'), buscarTudo(sb, 'acoes', 'criado_em')]);
         await local.substituir('leads', l);
         await local.substituir('contatos', c);
         await local.substituir('config', cfg);
+        await local.substituir('acoes', ac);
       } catch (e) {
         setErroSync(String(e.message || e));
       }
@@ -114,11 +120,11 @@ export default function AppProvider({ children }) {
   useEffect(() => { if (sessao) sincronizarAgora(); }, [sessao?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Empresas com algo na fila (uma visita = lead + contatos = 1 pendente). Configurações não contam.
-  const pendentes = useMemo(() => new Set(fila.filter((op) => op.tabela !== 'config')
+  const pendentes = useMemo(() => new Set(fila.filter((op) => op.tabela === 'leads' || op.tabela === 'contatos')
     .map((op) => (op.tabela === 'leads' ? op.linha.id : op.linha.lead_id))), [fila]);
 
   const valor = {
-    sb, sessao, leads, contatos, config, fila, pendentes, online, erroSync,
+    sb, sessao, leads, contatos, config, acoes, fila, pendentes, online, erroSync,
     gravarOps, sincronizarAgora,
     sair: async () => { await sb.auth.signOut(); },
   };

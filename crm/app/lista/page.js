@@ -6,6 +6,8 @@ import { useApp } from '../AppProvider.js';
 import { useAviso, textoDoStatus } from '../ui.js';
 import { CardLead, Dialogo } from '../componentes.js';
 import Pesquisa from '../Pesquisa.js';
+import AvisoAgenda from '../AvisoAgenda.js';
+import { compromissoDosOps, agendaDe } from '../../lib/agenda.js';
 import RegistrarContato, { podeRegistrarContato } from '../RegistrarContato.js';
 import { pesquisaDoLead, opsEditarLead } from '../../lib/pesquisa.js';
 import { opsArquivar, opsReativar, EVENTOS, rotuloEtapa } from '../../lib/etapas.js';
@@ -39,7 +41,7 @@ const passaFiltro = (l, f) => {
 };
 
 export default function Empresas() {
-  const { leads, contatos, pendentes, gravarOps } = useApp();
+  const { leads, contatos, config, acoes, pendentes, gravarOps } = useApp();
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('ativas');
   const [veic, setVeic] = useState(null);
@@ -48,6 +50,7 @@ export default function Empresas() {
   const [contato, setContato] = useState(null);
   const [relatorio, setRelatorio] = useState(false);
   const [aviso, mostrar] = useAviso();
+  const [compromisso, setCompromisso] = useState(null);
 
   const filtrados = useMemo(() => {
     const q = norm(busca);
@@ -60,6 +63,8 @@ export default function Empresas() {
     try {
       const status = await gravarOps(ops);
       mostrar(status, textoDoStatus(status, oQue, feminino));
+      const c = compromissoDosOps(ops, agendaDe(config));
+      if (c) setCompromisso(c);
       return true;
     } catch (e) {
       mostrar('erro', `Não foi possível guardar: ${e.message || e}`);
@@ -69,7 +74,7 @@ export default function Empresas() {
   const contatosDe = (id) => contatos.filter((c) => c.lead_id === id).sort((a, b) => String(b.data).localeCompare(String(a.data)));
   const exportar = async () => {
     const nomes = { bandeira: '-fora-do-perfil', perdidas: '-perdidas' };
-    baixarArquivo(`crm${nomes[filtro] || ''}-${hojeISO()}.xlsx`, new Blob([await gerarXLSX(filtrados, contatos)], { type: XLSX_MIME }));
+    baixarArquivo(`crm${nomes[filtro] || ''}-${hojeISO()}.xlsx`, new Blob([await gerarXLSX(filtrados, contatos, acoes)], { type: XLSX_MIME }));
   };
 
   return (
@@ -130,6 +135,7 @@ export default function Empresas() {
           {!contatosDe(historico.id).length && <p className="vazio">Sem contatos registrados.</p>}
         </Dialogo>
       )}
+      {compromisso && <div className="aviso-fixo"><AvisoAgenda compromisso={compromisso} onFechar={() => setCompromisso(null)} /></div>}
       {aviso}
     </main>
   );

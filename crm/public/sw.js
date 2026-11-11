@@ -1,7 +1,7 @@
 // Service worker: o app abre e funciona sem sinal. Os dados não passam por aqui (ficam no IndexedDB
 // e vão direto ao Supabase); o cache guarda só as páginas e os arquivos do app.
-const VERSAO = 'crm-v2';
-const PAGINAS = ['/', '/hoje/', '/painel/', '/lista/', '/config/', '/manifest.webmanifest', '/icone-192.png'];
+const VERSAO = 'crm-v3';
+const PAGINAS = ['/', '/hoje/', '/painel/', '/lista/', '/config/', '/acoes/', '/manifest.webmanifest', '/icone-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(PAGINAS)).then(() => self.skipWaiting()));

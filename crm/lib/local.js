@@ -1,6 +1,6 @@
 // Armazenamento no aparelho (IndexedDB): fila de envio e cópia dos dados para usar sem sinal.
 const NOME = 'micro-crm';
-const VERSAO = 2;
+const VERSAO = 3;
 
 let conexao;
 function abrir() {
@@ -15,6 +15,7 @@ function abrir() {
           db.createObjectStore('contatos', { keyPath: 'id' });
         }
         if (e.oldVersion < 2) db.createObjectStore('config', { keyPath: 'id' }); // metas e cadência
+        if (e.oldVersion < 3) db.createObjectStore('acoes', { keyPath: 'id' }); // ações de vendas
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);

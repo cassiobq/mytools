@@ -1,4 +1,4 @@
-# Gera SQL com dados fictícios (empresa começa com "_") no formato v2: pesquisa da abordagem,
+# Gera SQL com dados fictícios (empresa começa com "_") no formato v3 (com ações de vendas): pesquisa da abordagem,
 # funil (Lead > MQL > SQL > Venda > Associado), no-show, perdas, bandeiras e lead dos segurados.
 # Determinístico (seed fixa). Uso: python3 gerar_mock.py <user_id> saida.sql
 # Para apagar só os fictícios: remover_mock.sql
@@ -44,7 +44,8 @@ def util(d):  # empurra para dia útil
     while d.weekday() >= 5: d += timedelta(days=1)
     return d
 
-leads, contatos = [], []
+leads, contatos, acoes = [], [], []
+RUAS = ['Av. Presidente Vargas', 'Rua Rui Barbosa', 'Av. Brasil', 'Distrito Industrial', 'Av. Goiás', None, 'Rua Costa Gomes', 'Setor Morada do Sol', None]
 def contato(lead, d, evento, etapa, **kw):
     contatos.append({'id': str(uuid.uuid4()), 'lead_id': lead['id'], 'data': ts(d, random.randint(8, 17), random.randint(0, 59)),
                      'evento': evento, 'etapa': etapa, 'veiculos': kw.get('veiculos'), 'decisor': kw.get('decisor'),
@@ -62,11 +63,14 @@ dia = INICIO
 i = 0
 while dia <= HOJE and i < len(NOMES):
     if dia.weekday() >= 5: dia += timedelta(days=1); continue
+    A = {'id': str(uuid.uuid4()), 'criado_em': ts(dia, 7, random.randint(30, 55)), 'cidade': random.choice(CIDADES), 'endereco': random.choice(RUAS), 'finalizada_em': None}
+    if acoes: acoes[-1]['finalizada_em'] = A['criado_em']
+    acoes.append(A)
     for _ in range(random.choice([1, 2, 2, 3])):
         if i >= len(NOMES): break
         nome = '_' + NOMES[i]; i += 1
         L = {'id': str(uuid.uuid4()), 'criado_em': ts(dia, random.randint(8, 11), random.randint(0, 59)), 'origem': 'indicacao' if random.random() < .15 else 'abordagem',
-             'indicado_por': None, 'empresa': nome, 'cidade': random.choice(CIDADES), 'falou_decisor': None, 'decisor_nome': None, 'decisor_whatsapp': None,
+             'indicado_por': None, 'empresa': nome, 'cidade': A['cidade'], 'acao_id': A['id'], 'falou_decisor': None, 'decisor_nome': None, 'decisor_whatsapp': None,
              'n_veiculos': None, 'veiculos_mais': False, 'n_segurados': None, 'seguradora': None, 'vencimento_seguro': None, 'nota_seguro': None,
              'motivo_sem_seguro': None, 'bandeira': False, 'motivo_bandeira': None, 'etapa': 'lead', 'lead_pai_id': None, 'observacao': None, 'motivo_nao': None,
              'arquivado': False}
@@ -154,12 +158,15 @@ while dia <= HOJE and i < len(NOMES):
         L['etapa'] = 'associado'; sem_proximo(L)
     dia += timedelta(days=1)
 
-COLS_L = ['id', 'criado_em', 'origem', 'indicado_por', 'empresa', 'cidade', 'falou_decisor', 'decisor_nome', 'decisor_whatsapp', 'n_veiculos', 'veiculos_mais',
+COLS_A = ['id', 'criado_em', 'cidade', 'endereco', 'finalizada_em']
+COLS_L = ['acao_id', 'id', 'criado_em', 'origem', 'indicado_por', 'empresa', 'cidade', 'falou_decisor', 'decisor_nome', 'decisor_whatsapp', 'n_veiculos', 'veiculos_mais',
           'n_segurados', 'seguradora', 'vencimento_seguro', 'nota_seguro', 'motivo_sem_seguro', 'bandeira', 'motivo_bandeira', 'etapa', 'proximo_tipo',
           'data_proximo_passo', 'hora_proximo_passo', 'proximo_passo', 'lead_pai_id', 'observacao', 'motivo_nao', 'arquivado']
 COLS_C = ['id', 'lead_id', 'data', 'evento', 'etapa', 'veiculos', 'decisor', 'motivo', 'observacao']
 with open(sys.argv[2], 'w') as f:
-    f.write('-- Dados fictícios v2 (empresa começa com "_"). Gerado por gerar_mock.py\n')
+    f.write('-- Dados fictícios v3 (empresa começa com "_"). Gerado por gerar_mock.py\n')
+    f.write(f"insert into public.acoes (user_id, {', '.join(COLS_A)}) values\n")
+    f.write(',\n'.join(f"({q(USER)}, " + ', '.join(q(a[c]) for c in COLS_A) + ')' for a in acoes) + ';\n')
     for grupo in ([l for l in leads if not l['lead_pai_id']], [l for l in leads if l['lead_pai_id']]):
         f.write(f"insert into public.leads (user_id, {', '.join(COLS_L)}) values\n")
         f.write(',\n'.join(f"({q(USER)}, " + ', '.join(q(l[c]) for c in COLS_L) + ')' for l in grupo) + ';\n')
@@ -171,5 +178,5 @@ ev = {}
 for c in contatos: ev[c['evento']] = ev.get(c['evento'], 0) + 1
 et = {}
 for l in leads: et[l['etapa']] = et.get(l['etapa'], 0) + 1
-print(len(leads), 'leads', sum(1 for l in leads if l['lead_pai_id']), 'filhos', len(contatos), 'contatos', ev, et,
+print(len(acoes), 'ações', len(leads), 'leads', sum(1 for l in leads if l['lead_pai_id']), 'filhos', len(contatos), 'contatos', ev, et,
       'bandeiras', sum(l['bandeira'] for l in leads))

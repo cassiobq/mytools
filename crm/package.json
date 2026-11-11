@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --test"
+    "test": "TZ=America/Sao_Paulo node --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

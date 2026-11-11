@@ -11,6 +11,7 @@ const simNao = (v) => (v === true ? 'Sim' : v === false ? 'Não' : '');
 const COLS_EMPRESAS = [
   { header: 'Empresa', key: 'empresa', width: 32, v: (l) => l.empresa },
   { header: 'Cidade', key: 'cidade', width: 16, v: (l) => l.cidade },
+  { header: 'Ação de vendas', key: 'acao', width: 28, v: (l, porId, acoes) => { const a = acoes.get(l.acao_id); return a ? `${new Date(a.criado_em).toLocaleDateString('pt-BR')} · ${[a.endereco, a.cidade].filter(Boolean).join(' · ')}` : null; } },
   { header: 'Origem', key: 'origem', width: 12, v: (l) => rotulo('origem', l.origem) },
   { header: 'Indicado por', key: 'indicado_por', width: 16, v: (l) => l.indicado_por },
   { header: 'Etapa', key: 'etapa', width: 11, v: (l) => rotuloEtapa(l.etapa) },
@@ -63,14 +64,14 @@ function aba(wb, nome, cols, linhas, ...extra) {
   return ws;
 }
 
-export async function gerarXLSX(leads, contatos) {
+export async function gerarXLSX(leads, contatos, acoes = []) {
   const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Micro CRM';
   const porId = new Map(leads.map((l) => [l.id, l]));
   const ids = new Set(leads.map((l) => l.id));
   contatos = contatos.filter((c) => ids.has(c.lead_id)); // só o histórico das empresas exportadas
-  aba(wb, 'Empresas', COLS_EMPRESAS, leads, porId);
+  aba(wb, 'Empresas', COLS_EMPRESAS, leads, porId, new Map(acoes.map((a) => [a.id, a])));
   aba(wb, 'Histórico', COLS_HISTORICO, [...contatos].sort((a, b) => String(a.data).localeCompare(String(b.data))), porId);
   return wb.xlsx.writeBuffer();
 }

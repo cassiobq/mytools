@@ -137,6 +137,7 @@ function Topo() {
   if (erroSync && online && pend) { cls = 'erro'; txt = 'Erro ao enviar'; }
   const itens = [
     { href: '/', ico: '＋', rot: 'Registrar visita' },
+    { href: '/acoes/', ico: '📍', rot: 'Nova ação de vendas' },
     { href: '/hoje/', ico: '☑', rot: 'Hoje', badge: nHoje },
     { href: '/painel/', ico: '◔', rot: 'Painel' },
     { href: '/lista/', ico: '☰', rot: 'Empresas' },

@@ -50,6 +50,9 @@ async function preencher(page, empresa) {
 
 (async () => {
   const s1 = await login(TESTE_EMAIL);
+  // Ação de vendas ativa (a cidade dos registros vem dela).
+  const acao = { id: crypto.randomUUID(), cidade: 'Rio Verde', endereco: 'Teste automático', criado_em: new Date().toISOString() };
+  assert.equal((await rest(s1, 'acoes', { method: 'POST', body: JSON.stringify(acao) })).status, 201);
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'allow' });
   // Entra como o usuário de teste: a sessão vai para o localStorage, como o supabase-js guarda.
@@ -79,14 +82,15 @@ async function preencher(page, empresa) {
   assert.equal(r.corpo[0].n_segurados, 0);
   assert.equal(r.corpo[0].hora_proximo_passo, '14:30:00');
   assert.equal(r.corpo[0].cidade, 'Rio Verde');
+  assert.equal(r.corpo[0].acao_id, acao.id);
   const c1 = await rest(s1, `contatos?lead_id=eq.${r.corpo[0].id}&select=evento&order=data`);
   assert.deepEqual(c1.corpo.map((c) => c.evento), ['abordagem', 'mql']);
   ok('online: lead (MQL, 3 veículos, reunião 14h30) e eventos abordagem + MQL no banco');
   await page.reload();
   await contadorDeve(inicial + 1);
   ok('online: depois de recarregar, contador = inicial + 1');
-  assert.equal(await page.getByRole('group', { name: 'Cidade' }).getByRole('button', { name: 'Rio Verde' }).getAttribute('aria-pressed'), 'true');
-  ok('lembrou a cidade');
+  await page.getByTestId('acao-ativa').getByText('Teste automático · Rio Verde').waitFor();
+  ok('ação ativa no topo; o registro herdou a cidade e a ação');
 
   // 2) Sem sinal: fica pendente, não vai ao banco, sobrevive a recarregar.
   await ctx.setOffline(true);

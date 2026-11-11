@@ -157,15 +157,16 @@ function desfecho(f, a, dadosLead) {
 
 // Linhas a gravar. modo: 'abordagem' (visita nova) | 'retorno' (lead já existente, conta como retorno, não como lead novo).
 // filhos: leads "segurados" que já existem para este lead (para não criar outro).
-export function opsPesquisa(f, { lead = null, modo = 'abordagem', filhos = [], agora = new Date() } = {}) {
+// acao: ação de vendas ativa (visita nova): define a cidade e liga o lead à ação.
+export function opsPesquisa(f, { lead = null, modo = 'abordagem', filhos = [], acao = null, agora = new Date() } = {}) {
   const a = analisar(f);
   if (a.falta.length) throw new Error(`Falta responder: ${a.falta.join(', ')}`);
   const id = lead?.id || novoId();
   const etapaAntes = lead?.etapa || 'lead';
-  const dados = camposDaPesquisa(f, a);
+  const dados = camposDaPesquisa(acao && !lead ? { ...f, cidade: acao.cidade } : f, a);
   const d = desfecho(f, a, dados);
   const linhaLead = {
-    ...(lead ? limparLead(lead) : { id, criado_em: agora.toISOString(), arquivado: false, lead_pai_id: null }),
+    ...(lead ? limparLead(lead) : { id, criado_em: agora.toISOString(), arquivado: false, lead_pai_id: null, acao_id: acao?.id ?? null }),
     ...dados, ...d.lead,
   };
   const ops = [{ tabela: 'leads', linha: linhaLead }];
@@ -206,7 +207,7 @@ export function opsEditarLead(lead, f) {
 export const COLUNAS_LEAD = ['id', 'criado_em', 'origem', 'indicado_por', 'empresa', 'cidade', 'n_veiculos', 'tipo', 'estrategia',
   'falou_decisor', 'resultado', 'faixa_cadencia', 'vencimento_seguro', 'proximo_passo', 'data_proximo_passo',
   'motivo_nao', 'observacao', 'arquivado', 'decisor_nome', 'decisor_whatsapp', 'veiculos_mais', 'n_segurados', 'seguradora',
-  'nota_seguro', 'motivo_sem_seguro', 'bandeira', 'motivo_bandeira', 'etapa', 'proximo_tipo', 'hora_proximo_passo', 'lead_pai_id'];
+  'nota_seguro', 'motivo_sem_seguro', 'bandeira', 'motivo_bandeira', 'etapa', 'proximo_tipo', 'hora_proximo_passo', 'lead_pai_id', 'acao_id'];
 export function limparLead(l) {
   return Object.fromEntries(COLUNAS_LEAD.filter((c) => c in l).map((c) => [c, l[c]]));
 }

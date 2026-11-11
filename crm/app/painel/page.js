@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../AppProvider.js';
 import { hojeISO, formatarData } from '../../lib/datas.js';
+import { nomeDaAcao } from '../../lib/acoes.js';
 import {
   periodo, deslocar, funil, metasDo, esperadoAteHoje, taxasDasMetas, passagens, simular, taxasIniciais,
   mercado, conversaoPor, ciclo, ETAPAS_META, ROTULO_META, UNIDADE_META,
@@ -57,7 +58,16 @@ function Barras({ dados, total }) {
 }
 
 export default function Painel() {
-  const { leads, contatos, config } = useApp();
+  const { leads: todosLeads, contatos: todosContatos, config, acoes } = useApp();
+  const [acaoId, setAcaoId] = useState('');
+  // Filtro por ação de vendas: só as empresas registradas nela (e o histórico delas).
+  const { leads, contatos } = useMemo(() => {
+    if (!acaoId) return { leads: todosLeads, contatos: todosContatos };
+    const ls = todosLeads.filter((l) => l.acao_id === acaoId);
+    const ids = new Set(ls.map((l) => l.id));
+    return { leads: ls, contatos: todosContatos.filter((c) => ids.has(c.lead_id)) };
+  }, [todosLeads, todosContatos, acaoId]);
+  const listaAcoes = [...acoes].sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)));
   const hoje = hojeISO();
   const [p, setP] = useState(() => periodo('semana', hoje));
   const [cidade, setCidade] = useState(null);
@@ -104,6 +114,13 @@ export default function Painel() {
         <strong data-testid="periodo">{p.rotulo}</strong>
         <button type="button" className="opcao" onClick={() => setP(deslocar(p, 1))} disabled={!(p.fim <= hoje) && atual} aria-label="Próximo período">›</button>
       </div>
+
+      {listaAcoes.length > 0 && (
+        <select aria-label="Ação de vendas" value={acaoId} onChange={(e) => setAcaoId(e.target.value)} className="seletor">
+          <option value="">Todas as ações</option>
+          {listaAcoes.map((a) => <option key={a.id} value={a.id}>{new Date(a.criado_em).toLocaleDateString('pt-BR')} · {nomeDaAcao(a)}</option>)}
+        </select>
+      )}
 
       <h2>Metas {p.tipo === 'semana' ? 'da semana' : 'do mês'}</h2>
       {semMetas

@@ -85,17 +85,19 @@ export default function Pesquisa({ inicial, onSalvar, modo = 'abordagem', lead =
           <input id="indicado_por" type="text" value={f.indicado_por} onChange={(e) => set('indicado_por')(e.target.value)} />
         </>)}
 
+        {editar && (<>
         <label className="rot">Cidade</label>
-        {!outraCidade ? (
-          <div className="chips" role="group" aria-label="Cidade">
-            {opcoesCidade.map((o) => (
-              <button key={o.valor} type="button" className="opcao" aria-pressed={f.cidade === o.valor} onClick={() => set('cidade')(o.valor)}>{o.rotulo}</button>
-            ))}
-            <button type="button" className="opcao" onClick={() => { setOutraCidade(true); set('cidade')(''); }}>+ Outra</button>
-          </div>
-        ) : (
-          <input type="text" aria-label="Cidade" value={f.cidade} onChange={(e) => set('cidade')(e.target.value)} autoFocus />
-        )}
+          {!outraCidade ? (
+            <div className="chips" role="group" aria-label="Cidade">
+              {opcoesCidade.map((o) => (
+                <button key={o.valor} type="button" className="opcao" aria-pressed={f.cidade === o.valor} onClick={() => set('cidade')(o.valor)}>{o.rotulo}</button>
+              ))}
+              <button type="button" className="opcao" onClick={() => { setOutraCidade(true); set('cidade')(''); }}>+ Outra</button>
+            </div>
+          ) : (
+            <input type="text" aria-label="Cidade" value={f.cidade} onChange={(e) => set('cidade')(e.target.value)} autoFocus />
+          )}
+        </>)}
       </>) : (
         <p className="meta">{lead?.cidade || ''}{lead?.decisor_nome ? ` · Decisor: ${lead.decisor_nome}` : ''}</p>
       )}
@@ -108,7 +110,7 @@ export default function Pesquisa({ inicial, onSalvar, modo = 'abordagem', lead =
 
       {f.falou_decisor === false && !editar && (
         <div className="passo">
-          <CampoData id="data-retorno" rotulo="Retorno com o decisor" tipo="retorno" data={f.data} hora={f.hora} onData={set('data')} onHora={set('hora')} />
+          <CampoData excetoId={lead?.id} id="data-retorno" rotulo="Retorno com o decisor" tipo="retorno" data={f.data} hora={f.hora} onData={set('data')} onHora={set('hora')} />
           <label className="rot" htmlFor="decisor_nome">Nome do decisor (se souber)</label>
           <input id="decisor_nome" type="text" value={f.decisor_nome} onChange={(e) => set('decisor_nome')(e.target.value)} />
           <label className="rot" htmlFor="decisor_whatsapp">WhatsApp (se souber)</label>
@@ -151,7 +153,7 @@ export default function Pesquisa({ inicial, onSalvar, modo = 'abordagem', lead =
                 <label className="rot">Agendou reunião?</label>
                 <Escolha rotulo="Agendou reunião" opcoes={SIM_NAO} valor={f.agendou_reuniao} onChange={set('agendou_reuniao')} duas />
                 {f.agendou_reuniao === true && (
-                  <CampoData id="data-reuniao" rotulo="Data e hora da reunião" tipo="reuniao" data={f.data} hora={f.hora} onData={set('data')} onHora={set('hora')} />
+                  <CampoData excetoId={lead?.id} id="data-reuniao" rotulo="Data e hora da reunião" tipo="reuniao" data={f.data} hora={f.hora} onData={set('data')} onHora={set('hora')} />
                 )}
                 {f.agendou_reuniao === false && <p className="meta">Sem reunião: a empresa fica como “perdida” (dá para reativar na lista).</p>}
               </>)}

@@ -48,8 +48,20 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   const t = Date.now();
   const A = `Ausente ${t}`; const B = `SemSeguro ${t}`; const C = `Satisfeito ${t}`; const D = `Parcial ${t}`;
 
+  // Ação de vendas: cidade obrigatória, rua opcional; vira a ativa e a anterior é finalizada.
+  const antes = (await rest(s, 'acoes?select=id,finalizada_em&order=criado_em.desc&limit=1')).corpo[0];
+  await page.goto(`${CRM_URL}/acoes/`);
+  await page.getByRole('group', { name: 'Cidade da ação' }).getByRole('button', { name: '+ Outra' }).click();
+  await page.getByLabel('Cidade da ação').fill('Caçu');
+  await page.locator('#endereco-acao').fill(`Rua ${t}`);
+  await page.getByRole('button', { name: 'Criar ação' }).click();
+  await page.getByTestId('acao-ativa').getByText(`Rua ${t} · Caçu`).waitFor({ timeout: 15000 });
+  const acao = (await rest(s, `acoes?endereco=eq.${encodeURIComponent(`Rua ${t}`)}&select=*`)).corpo[0];
+  assert.equal(acao.cidade, 'Caçu');
+  if (antes) assert.ok((await rest(s, `acoes?id=eq.${antes.id}&select=finalizada_em`)).corpo[0].finalizada_em);
+  ok('Ação: criada (Caçu, rua opcional), virou a ativa no topo e finalizou a anterior');
+
   // A: decisor ausente -> retorno com data e hora; o botão só liga com a data e a hora.
-  await page.goto(CRM_URL);
   await page.fill('#empresa', A);
   await escolher(page, 'Falou com o decisor', 'Não');
   assert.equal(await page.getByRole('button', { name: 'Salvar visita' }).isDisabled(), true);
@@ -58,7 +70,11 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   await salvarVisita(page);
   let l = (await lead(s, A))[0];
   assert.equal(l.proximo_tipo, 'retorno'); assert.equal(l.data_proximo_passo, somar(hoje(), 1)); assert.equal(l.hora_proximo_passo, '09:00:00');
-  ok('Registrar: decisor ausente exige data e hora e grava o retorno');
+  assert.equal(l.cidade, 'Caçu'); assert.equal(l.acao_id, acao.id);
+  await page.getByTestId('aviso-agenda').getByText(`Retorno – ${A}`).waitFor();
+  assert.match(await page.getByRole('link', { name: 'Adicionar à agenda' }).getAttribute('href'), /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+  await page.getByRole('button', { name: 'Agora não' }).click();
+  ok('Registrar: decisor ausente exige data e hora; registro na cidade da ação; oferece "Adicionar à agenda"');
 
   // B: sem seguro -> reunião -> MQL. Aviso de empresa repetida ao digitar de novo.
   await page.fill('#empresa', B);
@@ -66,15 +82,31 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   await page.fill('#decisor_nome', 'Marcos'); await page.fill('#decisor_whatsapp', '64999990001');
   await escolher(page, 'Veículos', '2'); await escolher(page, 'Segurados', '0');
   await escolher(page, 'Motivo sem seguro', 'Condição financeira'); await escolher(page, 'Agendou reunião', 'Sim');
-  await page.getByRole('group', { name: 'Atalhos: Data e hora da reunião' }).getByRole('button', { name: '+3 dias' }).click();
-  await page.getByLabel('Hora: Data e hora da reunião').fill('15:00');
+  let util = somar(hoje(), 1);
+  while ([0, 6].includes(new Date(`${util}T12:00:00`).getDay())) util = somar(util, 1);
+  await page.locator('#data-reuniao').fill(util);
+  const livres = page.getByRole('group', { name: 'Horários livres: Data e hora da reunião' });
+  await livres.waitFor({ timeout: 15000 });
+  const slots = await livres.getByRole('button').allTextContents();
+  assert.ok(slots.length > 0 && slots.every((x) => /^(09|10|11|14|15|16)h00$/.test(x)), slots.join(','));
+  await livres.getByRole('button').first().click();
+  const horaB = `${slots[0].slice(0, 2)}:00`;
   await foto(page, '1-registrar');
   await salvarVisita(page);
   assert.equal((await lead(s, B))[0].etapa, 'mql');
+  assert.equal((await lead(s, B))[0].hora_proximo_passo, `${horaB}:00`);
+  await page.getByRole('button', { name: 'Agora não' }).click();
   await page.fill('#empresa', B.toUpperCase());
   await page.getByText(/Já registrada: SemSeguro/).waitFor();
   await page.fill('#empresa', '');
-  ok('Registrar: sem seguro + reunião = MQL; avisa empresa repetida');
+  // O horário marcado some dos livres daquele dia.
+  await page.fill('#empresa', `Conflito ${t}`);
+  await escolher(page, 'Falou com o decisor', 'Não');
+  await page.locator('#data-retorno').fill(util);
+  const livres2 = await page.getByRole('group', { name: 'Horários livres: Retorno com o decisor' }).getByRole('button').allTextContents();
+  assert.ok(!livres2.includes(slots[0]), `${slots[0]} ainda aparece livre`);
+  await page.fill('#empresa', '');
+  ok(`Registrar: sem seguro + reunião = MQL no horário livre ${slots[0]} (seg–sex, 9–12/14–17); o horário sai dos livres; avisa empresa repetida`);
 
   // C: todos segurados, nota 5 -> bandeira, retorno no dia 1 do vencimento, fora da agenda.
   const venc = somar(hoje(), 60).slice(0, 7);
@@ -153,6 +185,10 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   const s2 = await login(TESTE2_EMAIL);
   assert.equal((await rest(s2, 'config?select=*')).corpo.length, 0);
   ok('Configurações: metas gravadas; outro usuário não vê (RLS)');
+  await page.locator('#ical').fill('https://calendar.google.com/calendar/ical/pt.brazilian%23holiday%40group.v.calendar.google.com/public/basic.ics');
+  await page.getByRole('button', { name: 'Testar' }).click();
+  await page.getByText(/Agenda lida: \d+ compromisso/).waitFor({ timeout: 30000 });
+  ok('Configurações: testar link iCal (agenda pública de feriados) lê a agenda pelo servidor');
 
   // Painel: velocímetros e funil batem com o banco.
   await page.goto(`${CRM_URL}/painel/`);
@@ -163,8 +199,10 @@ const lead = async (s, empresa) => (await rest(s, `leads?empresa=eq.${encodeURIC
   await page.getByTestId('velo-Leads').getByText('/ 10').waitFor();
   await page.getByTestId('simulador').waitFor();
   await page.getByTestId('mercado').waitFor();
+  await page.getByLabel('Ação de vendas').selectOption(acao.id);
+  await page.getByTestId('funil').locator('tbody tr').first().locator('td').nth(1).filter({ hasText: /^4$/ }).waitFor({ timeout: 10000 });
   await foto(page, '5-painel');
-  ok(`Painel: velocímetro de Leads ${nLeads} / 10 na semana (meta 40 ÷ 4), simulador e leitura do mercado`);
+  ok(`Painel: velocímetro de Leads ${nLeads} / 10 na semana (meta 40 ÷ 4), simulador, mercado e filtro por ação (4 leads nesta ação)`);
 
   // Exportar XLSX (filtro Todas): linhas = empresas.
   await page.goto(`${CRM_URL}/lista/`);

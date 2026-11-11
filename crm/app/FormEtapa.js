@@ -32,7 +32,7 @@ export default function FormEtapa({ lead, onSalvar }) {
         <input id="veiculos-acao" type="number" inputMode="numeric" min="1" value={c.veiculos} onChange={(e) => set('veiculos')(e.target.value)} />
       </>)}
       {acao?.proxima && (
-        <CampoData id="data-acao" tipo={acao.proxima}
+        <CampoData id="data-acao" tipo={acao.proxima} excetoId={lead.id}
           rotulo={acao.proxima === 'reuniao' ? 'Nova data e hora da reunião' : acao.proxima === 'contrato' ? 'Cobrar assinatura em' : 'Próximo retorno'}
           data={c.data} hora={c.hora} onData={set('data')} onHora={set('hora')} />
       )}

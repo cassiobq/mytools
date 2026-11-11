@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider.js';
 import { useAviso, textoDoStatus } from '../ui.js';
 import { CardLead } from '../componentes.js';
+import AvisoAgenda from '../AvisoAgenda.js';
+import { compromissoDosOps, agendaDe } from '../../lib/agenda.js';
 import RegistrarContato from '../RegistrarContato.js';
 import { estaNaAgenda, esfriando, tentativasSemDecisor, opsArquivar } from '../../lib/etapas.js';
 import { hojeISO } from '../../lib/datas.js';
@@ -12,6 +14,7 @@ export default function Hoje() {
   const { leads, contatos, config, pendentes, gravarOps } = useApp();
   const [aberto, setAberto] = useState(null);
   const [aviso, mostrar] = useAviso();
+  const [compromisso, setCompromisso] = useState(null);
   const hoje = hojeISO();
   const porLead = useMemo(() => {
     const m = new Map();
@@ -30,6 +33,8 @@ export default function Hoje() {
     try {
       const status = await gravarOps(ops);
       mostrar(status, textoDoStatus(status, oQue, feminino));
+      const c = compromissoDosOps(ops, agendaDe(config));
+      if (c) setCompromisso(c);
       return true;
     } catch (e) {
       mostrar('erro', `Não foi possível guardar: ${e.message || e}`);
@@ -61,6 +66,7 @@ export default function Hoje() {
         {frios.map(({ l, d }) => cartao(l, d))}
       </>)}
       {aberto && <RegistrarContato lead={aberto} onFechar={() => setAberto(null)} gravar={gravar} />}
+      {compromisso && <div className="aviso-fixo"><AvisoAgenda compromisso={compromisso} onFechar={() => setCompromisso(null)} /></div>}
       {aviso}
     </main>
   );
