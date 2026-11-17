@@ -207,7 +207,10 @@ export function opsEditarLead(lead, f) {
 export const COLUNAS_LEAD = ['id', 'criado_em', 'origem', 'indicado_por', 'empresa', 'cidade', 'n_veiculos', 'tipo', 'estrategia',
   'falou_decisor', 'resultado', 'faixa_cadencia', 'vencimento_seguro', 'proximo_passo', 'data_proximo_passo',
   'motivo_nao', 'observacao', 'arquivado', 'decisor_nome', 'decisor_whatsapp', 'veiculos_mais', 'n_segurados', 'seguradora',
-  'nota_seguro', 'motivo_sem_seguro', 'bandeira', 'motivo_bandeira', 'etapa', 'proximo_tipo', 'hora_proximo_passo', 'lead_pai_id', 'acao_id'];
+  'nota_seguro', 'motivo_sem_seguro', 'bandeira', 'motivo_bandeira', 'etapa', 'proximo_tipo', 'hora_proximo_passo', 'lead_pai_id', 'acao_id',
+  // enriquecimento (dados públicos) e evento do Google Agenda
+  'cnpj', 'razao_social', 'nome_fantasia', 'situacao_cadastral', 'data_abertura', 'socios', 'cnae', 'porte', 'endereco',
+  'telefones', 'instagram', 'maps_url', 'enriquecido_em', 'enriquecimento', 'google_event_id'];
 export function limparLead(l) {
   return Object.fromEntries(COLUNAS_LEAD.filter((c) => c in l).map((c) => [c, l[c]]));
 }

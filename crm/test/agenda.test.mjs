@@ -58,9 +58,9 @@ test('adicionar à agenda: compromisso do que foi gravado e links (Android e web
   const c = compromissoDosOps(ops);
   assert.equal(c.titulo, 'Reunião – ACME');
   assert.equal(c.inicio.toISOString(), '2026-11-12T17:00:00.000Z');
-  assert.equal(c.fim.toISOString(), '2026-11-12T18:00:00.000Z');
+  assert.equal(c.fim.toISOString(), '2026-11-12T17:30:00.000Z');
   assert.match(linkAndroid(c), /^intent:#Intent;action=android\.intent\.action\.INSERT;type=vnd\.android\.cursor\.item\/event;S\.title=Reuni%C3%A3o%20%E2%80%93%20ACME;l\.beginTime=1794502800000;/);
-  assert.match(linkGoogleAgenda(c), /dates=20261112T170000Z%2F20261112T180000Z/);
+  assert.match(linkGoogleAgenda(c), /dates=20261112T170000Z%2F20261112T173000Z/);
   assert.equal(compromissoDosOps([{ tabela: 'leads', linha: { proximo_tipo: 'vencimento', data_proximo_passo: '2027-03-01' } }]), null);
 });
 

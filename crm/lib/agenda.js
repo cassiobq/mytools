@@ -1,7 +1,7 @@
 // Agenda: horários livres (horário de trabalho menos compromissos) e o botão "Adicionar à agenda" (Android).
 import { deISO } from './datas.js';
 
-export const AGENDA_PADRAO = { dias: [1, 2, 3, 4, 5], faixas: [['09:00', '12:00'], ['14:00', '17:00']], duracao: 60 };
+export const AGENDA_PADRAO = { dias: [1, 2, 3, 4, 5], faixas: [['09:00', '12:00'], ['14:00', '17:00']], duracao: 30 };
 export const agendaDe = (config) => ({ ...AGENDA_PADRAO, ...(config?.agenda || {}) });
 
 const min = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };

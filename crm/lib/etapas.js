@@ -18,6 +18,7 @@ export const TIPOS_PROXIMO = { retorno: 'Retorno', reuniao: 'Reunião', vencimen
 export const EVENTOS = {
   abordagem: 'Abordagem', retorno: 'Retorno', mql: 'Reunião agendada (MQL)', no_show: 'Reunião não aconteceu',
   sql: 'Em cotação (SQL)', venda: 'Venda fechada', associado: 'Contrato assinado', perda: 'Sem interesse', reativacao: 'Reativado',
+  relacionamento: 'Contato de relacionamento',
 };
 
 // Motivos de perda por etapa (sempre com "Outro" + texto).
