@@ -2,7 +2,7 @@
 const SUFIXOS = /\b(ltda|me|epp|eireli|s\/?a|sa|cia|comercio|com|de|da|do|das|dos|e)\b/g;
 
 export function normalizar(nome) {
-  return String(nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     .replace(/[^a-z0-9 ]+/g, ' ').replace(SUFIXOS, ' ').replace(/\s+/g, ' ').trim();
 }
 

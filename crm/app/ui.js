@@ -86,7 +86,7 @@ function Login() {
   const enviar = async (e) => {
     e.preventDefault();
     setErro(''); setOcupado(true);
-    const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
+    const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.pathname.startsWith('/oauth/') ? window.location.href : window.location.origin } });
     setOcupado(false);
     if (error) setErro(error.message); else setEnviado(true);
   };
