@@ -46,6 +46,10 @@ branch onde está o código (ver Deploy).
   team_YKrCqziCmlH5jPNTIhUnR9lQ), via `create_deployment` com `gitSource` `{type:"github", org:"cassiobq",
   repo:"mytools", ref:<branch>, sha:<commit>}` e `target:"production"`. URL: https://micro-crm-virid.vercel.app
 - Edge Functions no Supabase: `relatorio`, `agenda` (deploy com `deploy_edge_function`, arquivos inteiros).
+- Edge Function `mcp` (conector do Claude, OAuth do Supabase Auth): deploy com `verify_jwt: false` e TODOS os arquivos de
+  `crm/supabase/functions/mcp/` (inclusive `lib/`). A pasta `mcp/lib/` é cópia de `crm/lib/`: depois de mudar a lógica, rode
+  `node crm/scripts/copiar-lib-mcp.mjs` (o teste acusa cópia velha). Depois do deploy, baixe com `get_edge_function` e compare.
+  Cabeçalhos HTTP (ex.: WWW-Authenticate) só com ASCII: acento faz o cabeçalho sumir.
 - Segredos (chave Serper, ANTHROPIC_API_KEY, senha das contas de teste) **nunca** no repositório nem no
   chat: peça pelo formulário seguro (`request_credential`) ou para ele salvar no painel do serviço.
 - O service worker (`crm/public/sw.js`) precisa de `VERSAO` nova e da lista `PAGINAS` atualizada quando
